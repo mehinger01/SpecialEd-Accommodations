@@ -197,9 +197,63 @@ function classifyText(text: string): string {
   return "General Accommodation";
 }
 
-/** Returns true if the text matches any known accommodation category. */
-function matchesKnownCategory(text: string): boolean {
-  return CATEGORY_PATTERNS.some(({ patterns }) => patterns.some((p) => p.test(text)));
+/**
+ * Strict whitelist for Section 6 fallback extraction.
+ * Only lines that closely match one of these patterns are ever promoted to an
+ * accommodation record. Everything else — table headers, grade labels, section
+ * titles, rationale text, participation-status cells, single words — is ignored.
+ */
+const SEC6_ITEM_WHITELIST: RegExp[] = [
+  // Testing-location / alternate-setting accommodations
+  /alternative\s+test(?:ing)?\s+location/i,
+  /alternate\s+test(?:ing)?\s+location/i,
+  /administration\s+of\s+the\s+assessment\s+in\s+an\s+alternate/i,
+  /assessment\s+in\s+an\s+alternate\s+(?:education\s+)?setting/i,
+  /alternate\s+education\s+setting/i,
+  // Breaks
+  /\bbreaks?\b/i,
+  // Writing reductions
+  /reduced\s+writing/i,
+  /modified\s+(?:writing|assignment)/i,
+  // Extended time
+  /extended\s+time/i,
+  /time\s+and\s+a\s+half/i,
+  /double\s+time/i,
+  // Read aloud / audio
+  /read\s+aloud/i,
+  /oral\s+(?:reading|presentation|administration)/i,
+  /text[\s-]to[\s-]speech/i,
+  // Scribe / response
+  /\bscribe\b/i,
+  /oral\s+response/i,
+  /dictation\b/i,
+  /speech[\s-]to[\s-]text/i,
+  // Calculator / math aids
+  /\bcalculator\b/i,
+  /multiplication\s+table/i,
+  // Seating / environment
+  /preferential\s+seat/i,
+  /distraction[- ]free/i,
+  /separate\s+(?:room|setting|location)/i,
+  /quiet\s+(?:room|setting|location|environment)/i,
+  // Spell check / word tools
+  /spell[\s-]?check/i,
+  /word\s+prediction/i,
+  // Graphic organizer / visual aids
+  /graphic\s+organizer/i,
+  /visual\s+(?:aid|support|schedule)/i,
+  // Assistive technology
+  /assistive\s+technology/i,
+  // Communication supports
+  /augmentative\s+communication/i,
+  /\bAAC\b/,
+  // Prompting
+  /\bprompting\b/i,
+  /verbal\s+cue/i,
+];
+
+function matchesSec6Whitelist(text: string): boolean {
+  return SEC6_ITEM_WHITELIST.some((p) => p.test(text));
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -401,10 +455,12 @@ function extractSection6LineItems(rawLines: string[]): ParsedAccommodation[] {
     if (isDateLine(line) || ANY_DATE_RE.test(line)) continue;
     if (LOCATION_RE.test(line)) continue;
 
-    // Only extract lines that clearly match a known accommodation category.
-    // This excludes assessment grid headers, grade labels, single-word fragments,
-    // "State", "Determined", "Grades 9-12", "Rationale", "Participating", etc.
-    if (!matchesKnownCategory(line)) continue;
+    // Whitelist gate: only extract lines that exactly match a known assessment
+    // accommodation phrase. Everything else — table headers ("Universal Tools:"),
+    // grade labels ("Grades 9-12"), section titles ("Assessment AreaAssessment"),
+    // rationale text, single words ("State", "Determined", "Participating") —
+    // does not match the whitelist and is silently skipped.
+    if (!matchesSec6Whitelist(line)) continue;
 
     const key = normKey(line);
     if (seen.has(key)) continue;
