@@ -1,0 +1,129 @@
+import { Router } from "express";
+import { db, studentsTable, documentsTable, accommodationsTable } from "@workspace/db";
+import { eq, ilike, or, count, sql } from "drizzle-orm";
+
+const router = Router();
+
+router.get("/students", async (req, res) => {
+  try {
+    const search = req.query.search as string | undefined;
+
+    const base = db
+      .select({
+        id: studentsTable.id,
+        displayName: studentsTable.displayName,
+        gradeLevel: studentsTable.gradeLevel,
+        caseManager: studentsTable.caseManager,
+        planType: studentsTable.planType,
+        createdAt: studentsTable.createdAt,
+        accommodationCount: sql<number>`(select count(*) from accommodations a where a.student_id = ${studentsTable.id})`.as("accommodation_count"),
+        documentCount: sql<number>`(select count(*) from documents d where d.student_id = ${studentsTable.id})`.as("document_count"),
+      })
+      .from(studentsTable);
+
+    const rows = search
+      ? await base.where(
+          or(
+            ilike(studentsTable.displayName, `%${search}%`),
+            ilike(studentsTable.caseManager, `%${search}%`),
+            ilike(studentsTable.gradeLevel, `%${search}%`)
+          )
+        )
+      : await base;
+
+    res.json(
+      rows.map((r) => ({
+        ...r,
+        accommodationCount: Number(r.accommodationCount),
+        documentCount: Number(r.documentCount),
+      }))
+    );
+  } catch (err) {
+    req.log.error({ err }, "Failed to list students");
+    res.status(500).json({ error: "Failed to list students" });
+  }
+});
+
+router.get("/students/:id", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid ID" });
+
+    const [student] = await db
+      .select({
+        id: studentsTable.id,
+        displayName: studentsTable.displayName,
+        gradeLevel: studentsTable.gradeLevel,
+        caseManager: studentsTable.caseManager,
+        planType: studentsTable.planType,
+        createdAt: studentsTable.createdAt,
+        accommodationCount: sql<number>`(select count(*) from accommodations a where a.student_id = ${studentsTable.id})`.as("accommodation_count"),
+        documentCount: sql<number>`(select count(*) from documents d where d.student_id = ${studentsTable.id})`.as("document_count"),
+      })
+      .from(studentsTable)
+      .where(eq(studentsTable.id, id));
+
+    if (!student) return res.status(404).json({ error: "Student not found" });
+
+    const accommodations = await db
+      .select()
+      .from(accommodationsTable)
+      .where(eq(accommodationsTable.studentId, id));
+
+    const documents = await db
+      .select()
+      .from(documentsTable)
+      .where(eq(documentsTable.studentId, id));
+
+    const studentName = student.displayName;
+
+    res.json({
+      ...student,
+      accommodationCount: Number(student.accommodationCount),
+      documentCount: Number(student.documentCount),
+      accommodations: accommodations.map((a) => ({
+        ...a,
+        isApproved: a.isApproved ?? null,
+        notes: a.notes ?? null,
+        rawText: a.rawText ?? null,
+      })),
+      documents: documents.map((d) => ({
+        ...d,
+        studentId: d.studentId ?? null,
+        studentName: studentName,
+        accommodationCount: 0,
+        parsedAt: d.parsedAt ?? null,
+        parseError: d.parseError ?? null,
+      })),
+    });
+  } catch (err) {
+    req.log.error({ err }, "Failed to get student");
+    res.status(500).json({ error: "Failed to get student" });
+  }
+});
+
+router.get("/students/:id/accommodations", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid ID" });
+
+    const accommodations = await db
+      .select()
+      .from(accommodationsTable)
+      .where(eq(accommodationsTable.studentId, id));
+
+    res.json(
+      accommodations.map((a) => ({
+        ...a,
+        isApproved: a.isApproved ?? null,
+        notes: a.notes ?? null,
+        rawText: a.rawText ?? null,
+      }))
+    );
+  } catch (err) {
+    req.log.error({ err }, "Failed to get student accommodations");
+    res.status(500).json({ error: "Failed to get student accommodations" });
+  }
+});
+
+export default router;
