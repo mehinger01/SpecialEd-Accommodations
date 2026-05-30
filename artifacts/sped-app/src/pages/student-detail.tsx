@@ -1,5 +1,5 @@
 import { Layout } from "@/components/layout";
-import { useGetStudent } from "@workspace/api-client-react";
+import { useGetStudent, getGetStudentQueryKey } from "@workspace/api-client-react";
 import { useParams, Link } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,7 +12,7 @@ export default function StudentDetail() {
   const { id } = useParams<{ id: string }>();
   const studentId = parseInt(id || "0", 10);
   
-  const { data: student, isLoading } = useGetStudent(studentId, { query: { enabled: !!studentId } });
+  const { data: student, isLoading } = useGetStudent(studentId, { query: { enabled: !!studentId, queryKey: getGetStudentQueryKey(studentId) } });
 
   if (isLoading) {
     return (

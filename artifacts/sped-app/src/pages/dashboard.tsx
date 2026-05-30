@@ -1,12 +1,16 @@
+import { useState } from "react";
 import { Layout } from "@/components/layout";
 import { useGetStats, useGetRecentActivity } from "@workspace/api-client-react";
 import { FileText, Users, ListChecks, FileWarning, ArrowRight, Upload } from "lucide-react";
 import { Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
+import { UploadModal } from "@/components/upload-modal";
 
 export default function Dashboard() {
+  const [uploadOpen, setUploadOpen] = useState(false);
   const { data: stats, isLoading: isLoadingStats, isError: isErrorStats } = useGetStats();
   const { data: activity, isLoading: isLoadingActivity, isError: isErrorActivity } = useGetRecentActivity();
 
@@ -19,13 +23,12 @@ export default function Dashboard() {
               <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
               <p className="text-muted-foreground mt-1">Overview of accommodation extraction status.</p>
             </div>
-            <Link href="/documents" className="flex items-center">
-              <span className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium h-10 px-4 py-2 transition-colors">
-                <Upload className="w-4 h-4 mr-2" />
-                Upload Document
-              </span>
-            </Link>
+            <Button onClick={() => setUploadOpen(true)}>
+              <Upload className="w-4 h-4 mr-2" />
+              Upload Document
+            </Button>
           </div>
+          <UploadModal open={uploadOpen} onOpenChange={setUploadOpen} />
 
           {isErrorStats ? (
             <div className="bg-destructive/10 text-destructive p-4 rounded-md border border-destructive/20">

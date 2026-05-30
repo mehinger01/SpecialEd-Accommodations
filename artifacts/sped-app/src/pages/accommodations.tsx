@@ -149,7 +149,7 @@ export default function Accommodations() {
                               </Button>
                             </>
                           ) : (
-                            <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => updateAcc.mutate({ id: acc.id, data: { isReviewed: false, isApproved: null } }, { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListAccommodationsQueryKey() }) })}>
+                            <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => updateAcc.mutate({ id: acc.id, data: { isReviewed: false } }, { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListAccommodationsQueryKey() }) })}>
                               Undo Review
                             </Button>
                           )}

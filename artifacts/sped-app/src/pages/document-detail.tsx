@@ -16,7 +16,7 @@ export default function DocumentDetail() {
   const { id } = useParams<{ id: string }>();
   const docId = parseInt(id || "0", 10);
   
-  const { data: doc, isLoading } = useGetDocument(docId, { query: { enabled: !!docId } });
+  const { data: doc, isLoading } = useGetDocument(docId, { query: { enabled: !!docId, queryKey: getGetDocumentQueryKey(docId) } });
   const updateAcc = useUpdateAccommodation();
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -168,7 +168,7 @@ export default function DocumentDetail() {
                                 ) : (
                                   <><XCircle className="w-5 h-5 text-destructive/70" /><span className="text-muted-foreground">Rejected</span></>
                                 )}
-                                <Button variant="link" size="sm" className="h-auto p-0 mt-1 text-[10px]" onClick={() => updateAcc.mutate({ id: acc.id, data: { isReviewed: false, isApproved: null } }, { onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetDocumentQueryKey(docId) }) })}>
+                                <Button variant="link" size="sm" className="h-auto p-0 mt-1 text-[10px]" onClick={() => updateAcc.mutate({ id: acc.id, data: { isReviewed: false } }, { onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetDocumentQueryKey(docId) }) })}>
                                   Undo
                                 </Button>
                               </div>
