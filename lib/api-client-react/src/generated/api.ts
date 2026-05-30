@@ -25,6 +25,7 @@ import type {
   ActivityItem,
   ApiError,
   CategoryCount,
+  CreateStudentBody,
   Document,
   DocumentDetail,
   DocumentUpload,
@@ -595,6 +596,77 @@ export function useListStudents<TData = Awaited<ReturnType<typeof listStudents>>
 
 
 
+
+export const getCreateStudentUrl = () => {
+
+
+
+
+  return `/api/students`
+}
+
+/**
+ * @summary Create a new student record
+ */
+export const createStudent = async (createStudentBody: CreateStudentBody, options?: RequestInit): Promise<Student> => {
+
+  return customFetch<Student>(getCreateStudentUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      createStudentBody,)
+  }
+);}
+
+
+
+
+export const getCreateStudentMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createStudent>>, TError,{data: BodyType<CreateStudentBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createStudent>>, TError,{data: BodyType<CreateStudentBody>}, TContext> => {
+
+const mutationKey = ['createStudent'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createStudent>>, {data: BodyType<CreateStudentBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createStudent(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateStudentMutationResult = NonNullable<Awaited<ReturnType<typeof createStudent>>>
+    export type CreateStudentMutationBody = BodyType<CreateStudentBody>
+    export type CreateStudentMutationError = ErrorType<ApiError>
+
+    /**
+ * @summary Create a new student record
+ */
+export const useCreateStudent = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createStudent>>, TError,{data: BodyType<CreateStudentBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createStudent>>,
+        TError,
+        {data: BodyType<CreateStudentBody>},
+        TContext
+      > => {
+      return useMutation(getCreateStudentMutationOptions(options));
+    }
 
 export const getGetStudentUrl = (id: number,) => {
 

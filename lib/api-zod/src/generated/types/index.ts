@@ -12,6 +12,7 @@ export * from './activityItem';
 export * from './activityItemType';
 export * from './apiError';
 export * from './categoryCount';
+export * from './createStudentBody';
 export * from './document';
 export * from './documentDetail';
 export * from './documentDetailDocumentType';

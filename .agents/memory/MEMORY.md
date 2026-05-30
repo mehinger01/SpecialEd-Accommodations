@@ -1,0 +1,1 @@
+- [Orval codegen barrel patch](orval-codegen-patch.md) — Orval regenerates index.ts with a types re-export that conflicts; patch script removes it after every codegen run.

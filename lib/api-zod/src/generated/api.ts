@@ -126,6 +126,17 @@ export const ListStudentsResponse = zod.array(ListStudentsResponseItem)
 
 
 /**
+ * @summary Create a new student record
+ */
+
+
+
+export const CreateStudentBody = zod.object({
+  "displayName": zod.string().min(1)
+})
+
+
+/**
  * @summary Get student with their accommodations
  */
 export const GetStudentParams = zod.object({

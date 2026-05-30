@@ -131,6 +131,11 @@ export interface DocumentDetail {
   accommodations: Accommodation[];
 }
 
+export interface CreateStudentBody {
+  /** @minLength 1 */
+  displayName: string;
+}
+
 export type StudentPlanType = typeof StudentPlanType[keyof typeof StudentPlanType];
 
 

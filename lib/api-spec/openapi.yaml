@@ -156,6 +156,29 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Student"
+    post:
+      operationId: createStudent
+      tags: [students]
+      summary: Create a new student record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateStudentBody"
+      responses:
+        "201":
+          description: Created student
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Student"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
 
   /students/{id}:
     get:
@@ -474,6 +497,15 @@ components:
         - parseError
         - rawTextPreview
         - accommodations
+
+    CreateStudentBody:
+      type: object
+      properties:
+        displayName:
+          type: string
+          minLength: 1
+      required:
+        - displayName
 
     Student:
       type: object

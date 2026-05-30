@@ -2,20 +2,28 @@ import { useState, useRef, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useQueryClient } from "@tanstack/react-query";
-import { getListDocumentsQueryKey, useListStudents, getGetStatsQueryKey, getGetRecentActivityQueryKey } from "@workspace/api-client-react";
+import {
+  getListDocumentsQueryKey,
+  getListStudentsQueryKey,
+  useListStudents,
+  useCreateStudent,
+  getGetStatsQueryKey,
+  getGetRecentActivityQueryKey,
+} from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, FileText, CheckCircle2, XCircle, ChevronDown, ChevronUp } from "lucide-react";
+import { Loader2, FileText, CheckCircle2, XCircle, ChevronDown, ChevronUp, UserPlus } from "lucide-react";
 
 interface UploadModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-type UploadPhase = "idle" | "uploading" | "polling" | "done" | "error";
+type UploadPhase = "idle" | "creating-student" | "uploading" | "polling" | "done" | "error";
 
 interface ParsedAccommodation {
   id: number;
@@ -36,6 +44,7 @@ export function UploadModal({ open, onOpenChange }: UploadModalProps) {
   const [file, setFile] = useState<File | null>(null);
   const [documentType, setDocumentType] = useState<string>("IEP");
   const [studentId, setStudentId] = useState<string>("none");
+  const [newStudentName, setNewStudentName] = useState<string>("");
   const [phase, setPhase] = useState<UploadPhase>("idle");
   const [statusMessage, setStatusMessage] = useState<string>("");
   const [result, setResult] = useState<ParseResult | null>(null);
@@ -46,6 +55,7 @@ export function UploadModal({ open, onOpenChange }: UploadModalProps) {
   const { toast } = useToast();
 
   const { data: students } = useListStudents({}, { query: { enabled: open } as any });
+  const createStudent = useCreateStudent();
 
   function stopPolling() {
     if (pollIntervalRef.current) {
@@ -55,9 +65,7 @@ export function UploadModal({ open, onOpenChange }: UploadModalProps) {
   }
 
   useEffect(() => {
-    if (!open) {
-      stopPolling();
-    }
+    if (!open) stopPolling();
     return () => stopPolling();
   }, [open]);
 
@@ -66,6 +74,7 @@ export function UploadModal({ open, onOpenChange }: UploadModalProps) {
     setFile(null);
     setDocumentType("IEP");
     setStudentId("none");
+    setNewStudentName("");
     setPhase("idle");
     setStatusMessage("");
     setResult(null);
@@ -82,12 +91,12 @@ export function UploadModal({ open, onOpenChange }: UploadModalProps) {
 
     pollIntervalRef.current = setInterval(async () => {
       attempts++;
-      console.log(`[upload-modal] polling attempt ${attempts} for document ${docId}`);
+      console.log(`[upload-modal] poll attempt ${attempts} for doc ${docId}`);
 
       try {
         const res = await fetch(`/api/documents/${docId}`);
         if (!res.ok) {
-          console.error(`[upload-modal] poll failed with status ${res.status}`);
+          console.error(`[upload-modal] poll failed status=${res.status}`);
           return;
         }
         const doc = await res.json();
@@ -107,9 +116,10 @@ export function UploadModal({ open, onOpenChange }: UploadModalProps) {
           queryClient.invalidateQueries({ queryKey: getListDocumentsQueryKey() });
           queryClient.invalidateQueries({ queryKey: getGetStatsQueryKey() });
           queryClient.invalidateQueries({ queryKey: getGetRecentActivityQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getListStudentsQueryKey() });
         } else if (doc.status === "error") {
           stopPolling();
-          console.error("[upload-modal] parse error from server:", doc.parseError);
+          console.error("[upload-modal] parse error:", doc.parseError);
           setResult({
             docId,
             filename,
@@ -122,13 +132,13 @@ export function UploadModal({ open, onOpenChange }: UploadModalProps) {
           queryClient.invalidateQueries({ queryKey: getListDocumentsQueryKey() });
         } else if (attempts >= maxAttempts) {
           stopPolling();
-          console.error("[upload-modal] polling timed out after", maxAttempts, "attempts");
+          console.error("[upload-modal] polling timed out");
           setPhase("error");
           setStatusMessage("Parsing timed out. Check the Documents page for status.");
           queryClient.invalidateQueries({ queryKey: getListDocumentsQueryKey() });
         }
       } catch (err) {
-        console.error("[upload-modal] poll request threw:", err);
+        console.error("[upload-modal] poll threw:", err);
       }
     }, 1500);
   }
@@ -137,16 +147,48 @@ export function UploadModal({ open, onOpenChange }: UploadModalProps) {
     if (!file) return;
 
     console.log("[upload-modal] starting upload:", file.name, "type:", documentType, "student:", studentId);
-    setPhase("uploading");
-    setStatusMessage("Uploading…");
     setResult(null);
 
     try {
+      let resolvedStudentId: string = studentId;
+
+      if (studentId === "new") {
+        const name = newStudentName.trim();
+        if (!name) {
+          toast({ title: "Student name required", description: "Enter a display name for the new student.", variant: "destructive" });
+          return;
+        }
+        setPhase("creating-student");
+        setStatusMessage(`Creating student "${name}"…`);
+        console.log("[upload-modal] creating new student:", name);
+
+        const created = await new Promise<{ id: number }>((resolve, reject) => {
+          createStudent.mutate(
+            { data: { displayName: name } },
+            {
+              onSuccess: (s) => {
+                console.log("[upload-modal] student created:", s);
+                queryClient.invalidateQueries({ queryKey: getListStudentsQueryKey() });
+                resolve(s);
+              },
+              onError: (err) => {
+                console.error("[upload-modal] student creation failed:", err);
+                reject(err);
+              },
+            }
+          );
+        });
+        resolvedStudentId = String(created.id);
+      }
+
+      setPhase("uploading");
+      setStatusMessage("Uploading…");
+
       const formData = new FormData();
       formData.append("file", file);
       formData.append("documentType", documentType);
-      if (studentId !== "none") {
-        formData.append("studentId", studentId);
+      if (resolvedStudentId !== "none") {
+        formData.append("studentId", resolvedStudentId);
       }
 
       const res = await fetch("/api/documents", {
@@ -172,7 +214,7 @@ export function UploadModal({ open, onOpenChange }: UploadModalProps) {
 
       await pollDocument(doc.id, doc.filename);
     } catch (err) {
-      console.error("[upload-modal] upload threw:", err);
+      console.error("[upload-modal] threw:", err);
       setPhase("error");
       setStatusMessage(err instanceof Error ? err.message : String(err));
       toast({
@@ -183,8 +225,9 @@ export function UploadModal({ open, onOpenChange }: UploadModalProps) {
     }
   }
 
-  const isWorking = phase === "uploading" || phase === "polling";
+  const isWorking = phase === "creating-student" || phase === "uploading" || phase === "polling";
   const isDone = phase === "done" || phase === "error";
+  const canSubmit = !!file && !isWorking && (studentId !== "new" || newStudentName.trim().length > 0);
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose(); }}>
@@ -196,7 +239,7 @@ export function UploadModal({ open, onOpenChange }: UploadModalProps) {
           </DialogDescription>
         </DialogHeader>
 
-        {phase === "idle" || isWorking ? (
+        {(phase === "idle" || isWorking) && (
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="file">PDF File</Label>
@@ -234,20 +277,53 @@ export function UploadModal({ open, onOpenChange }: UploadModalProps) {
               </div>
 
               <div className="space-y-2">
-                <Label>Student (optional)</Label>
-                <Select value={studentId} onValueChange={setStudentId} disabled={isWorking}>
+                <Label>Student</Label>
+                <Select value={studentId} onValueChange={(v) => { setStudentId(v); if (v !== "new") setNewStudentName(""); }} disabled={isWorking}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Unassigned" />
+                    <SelectValue placeholder="Select or create…" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">— Unassigned —</SelectItem>
-                    {students?.map((s) => (
-                      <SelectItem key={s.id} value={s.id.toString()}>{s.displayName}</SelectItem>
-                    ))}
+                    <SelectItem value="new">
+                      <span className="flex items-center gap-2 text-primary font-medium">
+                        <UserPlus className="w-3.5 h-3.5" />
+                        Create New Student…
+                      </span>
+                    </SelectItem>
+                    {students && students.length > 0 && (
+                      <>
+                        <div className="px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
+                          Existing Students
+                        </div>
+                        {students.map((s) => (
+                          <SelectItem key={s.id} value={s.id.toString()}>{s.displayName}</SelectItem>
+                        ))}
+                      </>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
             </div>
+
+            {studentId === "new" && (
+              <div className="space-y-2 rounded-lg border border-primary/20 bg-primary/5 p-3">
+                <Label htmlFor="new-student-name" className="text-sm font-medium flex items-center gap-1.5">
+                  <UserPlus className="w-3.5 h-3.5 text-primary" />
+                  New Student Display Name
+                </Label>
+                <Input
+                  id="new-student-name"
+                  placeholder="e.g. Student G"
+                  value={newStudentName}
+                  onChange={(e) => setNewStudentName(e.target.value)}
+                  disabled={isWorking}
+                  autoFocus
+                />
+                <p className="text-xs text-muted-foreground">
+                  A student record will be created automatically before uploading. You can add grade, case manager, and plan type from the Students page later.
+                </p>
+              </div>
+            )}
 
             {isWorking && (
               <div className="flex items-center gap-3 bg-muted/40 rounded px-4 py-3 text-sm text-muted-foreground">
@@ -256,11 +332,15 @@ export function UploadModal({ open, onOpenChange }: UploadModalProps) {
               </div>
             )}
           </div>
-        ) : null}
+        )}
 
         {isDone && result && (
           <div className="space-y-4 py-2">
-            <div className={`flex items-start gap-3 rounded-lg px-4 py-3 text-sm ${phase === "done" ? "bg-green-50 text-green-800 border border-green-200" : "bg-destructive/10 text-destructive border border-destructive/20"}`}>
+            <div className={`flex items-start gap-3 rounded-lg px-4 py-3 text-sm ${
+              phase === "done"
+                ? "bg-green-50 text-green-800 border border-green-200"
+                : "bg-destructive/10 text-destructive border border-destructive/20"
+            }`}>
               {phase === "done"
                 ? <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" />
                 : <XCircle className="w-4 h-4 mt-0.5 shrink-0" />
@@ -278,7 +358,7 @@ export function UploadModal({ open, onOpenChange }: UploadModalProps) {
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-muted/30">
-                        <TableHead className="w-[140px]">Category</TableHead>
+                        <TableHead className="w-[160px]">Category</TableHead>
                         <TableHead>Description</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -301,7 +381,7 @@ export function UploadModal({ open, onOpenChange }: UploadModalProps) {
 
             {phase === "done" && result.accommodations.length === 0 && (
               <p className="text-sm text-muted-foreground bg-muted/30 rounded px-4 py-3">
-                No accommodations were extracted. The PDF may not contain recognizable accommodation patterns, or the text may not be machine-readable. Check the document detail page for the raw text preview.
+                No accommodations were extracted. The PDF may not contain recognizable patterns or the text may not be machine-readable. Check the document detail page for the raw text preview.
               </p>
             )}
 
@@ -348,9 +428,12 @@ export function UploadModal({ open, onOpenChange }: UploadModalProps) {
               <Button variant="outline" onClick={handleClose} disabled={isWorking}>
                 Cancel
               </Button>
-              <Button onClick={handleUpload} disabled={!file || isWorking}>
+              <Button onClick={handleUpload} disabled={!canSubmit}>
                 {isWorking && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                {phase === "uploading" ? "Uploading…" : phase === "polling" ? "Parsing…" : "Upload & Parse"}
+                {phase === "creating-student" ? "Creating Student…"
+                  : phase === "uploading" ? "Uploading…"
+                  : phase === "polling" ? "Parsing…"
+                  : "Upload & Parse"}
               </Button>
             </>
           )}

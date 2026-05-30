@@ -44,6 +44,41 @@ router.get("/students", async (req, res) => {
   }
 });
 
+router.post("/students", async (req, res) => {
+  try {
+    const { displayName } = req.body as { displayName?: string };
+    if (!displayName || !displayName.trim()) {
+      return res.status(400).json({ error: "displayName is required" });
+    }
+
+    const [student] = await db
+      .insert(studentsTable)
+      .values({
+        displayName: displayName.trim(),
+        gradeLevel: "Unknown",
+        caseManager: "Unassigned",
+        planType: "NONE",
+      })
+      .returning();
+
+    req.log.info({ studentId: student.id }, "Created student");
+
+    res.status(201).json({
+      id: student.id,
+      displayName: student.displayName,
+      gradeLevel: student.gradeLevel,
+      caseManager: student.caseManager,
+      planType: student.planType,
+      accommodationCount: 0,
+      documentCount: 0,
+      createdAt: student.createdAt,
+    });
+  } catch (err) {
+    req.log.error({ err }, "Failed to create student");
+    res.status(500).json({ error: "Failed to create student" });
+  }
+});
+
 router.get("/students/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
