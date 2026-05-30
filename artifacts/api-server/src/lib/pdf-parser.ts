@@ -44,10 +44,11 @@ const SEC6_END   = /section\s*7\b|specially\s+designed\s+instruction/i;
 // ─── Line-level patterns ──────────────────────────────────────────────────────
 
 /**
- * Section labels in Skyward IEPs that are category dividers, NOT accommodation names.
- * These must never be promoted to an accommodation record.
+ * Section labels in Skyward IEPs that are category dividers or form boilerplate,
+ * NOT accommodation names. These are filtered from names AND from descriptions.
  */
 const IGNORE_HEADERS: RegExp[] = [
+  // Form-structure labels
   /^ongoing instruction/i,
   /^scheduling[,\s]/i,
   /^presentation[,\s]/i,
@@ -75,7 +76,38 @@ const IGNORE_HEADERS: RegExp[] = [
   /^provider/i,
   /^frequency/i,
   /^duration/i,
-  /^setting/i,
+  /^setting\s*$/i,
+  // Boilerplate sentences found after each accommodation in Skyward IEPs
+  /^the iep team must consider/i,
+  /^extracurricular and nonacademic/i,
+  /^needs,\s*social interaction/i,
+  /^performance criteria/i,
+  /^evaluation procedure/i,
+  /^evaluation schedule/i,
+  /^schedule for reporting/i,
+  /^parents will be informed/i,
+  // Section 6 form structure (assessment grids)
+  /^based on grade level/i,
+  /^is a state assessment/i,
+  /^state determined assessment/i,
+  /^state alternate assessment/i,
+  /^assessment area/i,
+  /^universal tools?/i,
+  /^for students not taking/i,
+  /^indicate why it is not appropriate/i,
+  /^why the alternate assessment/i,
+  /^is a district[- ]wide assessment/i,
+  /^district[- ]wide assessment/i,
+  /^district wide assessments?/i,
+  /^college entrance/i,
+  /^rationale\s*$/i,
+  /^participation\s*$/i,
+  /^participating\s*$/i,
+  /^appropriate\.\s*$/i,
+  /^grades?\s+\d/i,
+  /^state\s*$/i,
+  /^determined\s*$/i,
+  /^assessment\s*$/i,
 ];
 
 const START_DATE_RE = /start\s*date\s*:?\s*(\d{1,2}\/\d{1,2}\/\d{4})/i;
@@ -140,6 +172,22 @@ const CATEGORY_PATTERNS: Array<{ category: string; patterns: RegExp[] }> = [
     category: "Communication Support",
     patterns: [/AAC/i, /augmentative\s+communication/i, /communication\s+(?:device|board|support)/i, /sign\s+language/i],
   },
+  {
+    category: "Spell Check / Word Prediction",
+    patterns: [/spell[\s-]?check/i, /word\s+prediction/i, /spellcheck/i],
+  },
+  {
+    category: "Graphic Organizer",
+    patterns: [/graphic\s+organizer/i, /visual\s+(?:aid|support|organizer)/i, /anchor\s+chart/i],
+  },
+  {
+    category: "Prompting / Cueing",
+    patterns: [/prompting/i, /cueing/i, /verbal\s+prompt/i, /gestural\s+prompt/i, /check[\s-]in/i],
+  },
+  {
+    category: "Enlarged Print",
+    patterns: [/enlarged?\s+print/i, /large\s+print/i, /font\s+size/i, /magnif/i],
+  },
 ];
 
 function classifyText(text: string): string {
@@ -147,6 +195,11 @@ function classifyText(text: string): string {
     if (patterns.some((p) => p.test(text))) return category;
   }
   return "General Accommodation";
+}
+
+/** Returns true if the text matches any known accommodation category. */
+function matchesKnownCategory(text: string): boolean {
+  return CATEGORY_PATTERNS.some(({ patterns }) => patterns.some((p) => p.test(text)));
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -200,15 +253,20 @@ function findSection(
   return { lines: lines.slice(start, end), found: true };
 }
 
-// ─── Date-anchored block parser (used for both Section 5 and Section 6) ───────
+// ─── Date-anchored block parser ───────────────────────────────────────────────
 //
 // Algorithm:
 //   1. Locate every "Start Date: MM/DD/YYYY" line in the section.
 //   2. For each, look BACK (up to 10 lines) for the accommodation title —
 //      the last non-ignore, non-date, non-location, non-empty line.
-//   3. Find the matching End Date within the next 6 lines.
-//   4. Collect description text from after End Date until the next Start Date.
-//   5. Deduplicate by normalized accommodation name.
+//   3. Pre-compute ALL name indices up front so we know where each block's
+//      title sits — this lets us use nameIdx[d+1] as the upper bound for
+//      description collection, preventing the title of block N+1 from bleeding
+//      into the description of block N.
+//   4. Find the matching End Date within the next 6 lines.
+//   5. Collect description text from after End Date up to (but not including)
+//      the title line of the next block.
+//   6. Deduplicate by normalized accommodation name.
 
 function parseDateAnchoredBlocks(
   rawLines: string[],
@@ -218,34 +276,42 @@ function parseDateAnchoredBlocks(
   const results: ParsedAccommodation[] = [];
   const seen = new Set<string>();
 
-  // Collect all Start Date line indices
+  // Step 1: collect all Start Date line indices
   const startDateIdxs: number[] = [];
   for (let i = 0; i < cleaned.length; i++) {
     if (START_DATE_RE.test(cleaned[i])) startDateIdxs.push(i);
   }
 
-  for (let d = 0; d < startDateIdxs.length; d++) {
-    const sdIdx = startDateIdxs[d];
-    const nextSdIdx = startDateIdxs[d + 1] ?? cleaned.length;
+  if (startDateIdxs.length === 0) return [];
 
-    // ── Accommodation name: look backwards ──────────────────────────────────
-    let nameIdx = -1;
-    for (let i = sdIdx - 1; i >= Math.max(0, sdIdx - 10); i--) {
+  // Step 2: pre-compute name index for every Start Date block.
+  // This is crucial: we need nameIdxs[d+1] to know where NOT to include
+  // text when collecting descriptions for block d.
+  const nameIdxs: number[] = startDateIdxs.map((sdIdx) => {
+    for (let i = sdIdx - 1; i >= Math.max(0, sdIdx - 12); i--) {
       const line = cleaned[i];
       if (!line || line.length < 3) continue;
       if (isIgnoreHeader(line)) continue;
       if (isDateLine(line) || ANY_DATE_RE.test(line)) continue;
       if (LOCATION_RE.test(line)) continue;
-      nameIdx = i;
-      break;
+      return i;
     }
+    return -1;
+  });
 
+  for (let d = 0; d < startDateIdxs.length; d++) {
+    const sdIdx   = startDateIdxs[d];
+    const nameIdx = nameIdxs[d];
     if (nameIdx === -1) continue;
 
     const accommodationName = cleaned[nameIdx];
 
+    // Description upper bound: stop at the title line of the NEXT block,
+    // not at its Start Date. This prevents the next block's name from
+    // appearing in the current block's description.
+    const nextNameIdx = d + 1 < nameIdxs.length ? nameIdxs[d + 1] : cleaned.length;
+
     // ── Dates ────────────────────────────────────────────────────────────────
-    // Start date may share a line with end date (inline format)
     let startDate: string | null = null;
     let endDate: string | null = null;
     let edIdx = sdIdx;
@@ -260,7 +326,6 @@ function parseDateAnchoredBlocks(
       endDate = sameLineEnd[1];
       edIdx = sdIdx;
     } else {
-      // Search forward for End Date
       for (let i = sdIdx + 1; i < Math.min(sdIdx + 7, cleaned.length); i++) {
         const em = END_DATE_RE.exec(cleaned[i]);
         if (em) {
@@ -272,12 +337,13 @@ function parseDateAnchoredBlocks(
     }
 
     // ── Description lines & location ────────────────────────────────────────
+    // Collect from after End Date up to (but not including) the next name line.
     const descParts: string[] = [];
     let location: string | null = null;
 
-    for (let i = edIdx + 1; i < nextSdIdx; i++) {
+    for (let i = edIdx + 1; i < nextNameIdx; i++) {
       const line = cleaned[i];
-      if (!line || line.length < 3) continue;
+      if (!line || line.length < 4) continue;
       if (isIgnoreHeader(line)) continue;
       if (isDateLine(line) || ANY_DATE_RE.test(line)) continue;
 
@@ -296,7 +362,7 @@ function parseDateAnchoredBlocks(
     seen.add(key);
 
     const rawSnippet = rawLines
-      .slice(nameIdx, Math.min(nameIdx + 20, nextSdIdx))
+      .slice(nameIdx, Math.min(nameIdx + 20, nextNameIdx))
       .join("\n")
       .slice(0, 600);
 
@@ -315,10 +381,13 @@ function parseDateAnchoredBlocks(
   return results;
 }
 
-// ─── Section 6 fallback: keyword line extraction ──────────────────────────────
+// ─── Section 6 fallback: known-accommodation keyword extraction ───────────────
 //
 // When Section 6 has no date-anchored blocks (e.g. checkbox-style assessments),
-// we fall back to extracting short non-ignore lines that look like named items.
+// we scan for lines that match a known accommodation category. This is
+// intentionally strict — we only promote a line to an accommodation if it
+// matches a named category pattern, so form labels, table headers, single words,
+// grade labels, and boilerplate sentences are all excluded.
 
 function extractSection6LineItems(rawLines: string[]): ParsedAccommodation[] {
   const cleaned = rawLines.map(cleanLine);
@@ -327,13 +396,15 @@ function extractSection6LineItems(rawLines: string[]): ParsedAccommodation[] {
 
   for (let i = 0; i < cleaned.length; i++) {
     const line = cleaned[i];
-    if (!line || line.length < 5 || line.length > 180) continue;
+    if (!line || line.length < 4 || line.length > 120) continue;
     if (isIgnoreHeader(line)) continue;
     if (isDateLine(line) || ANY_DATE_RE.test(line)) continue;
     if (LOCATION_RE.test(line)) continue;
 
-    // Skip lines that look like prose sentences (contain lowercase subject–verb pattern)
-    if (/\b(?:will|should|must|may|can)\s+\w/i.test(line) && line.length > 60) continue;
+    // Only extract lines that clearly match a known accommodation category.
+    // This excludes assessment grid headers, grade labels, single-word fragments,
+    // "State", "Determined", "Grades 9-12", "Rationale", "Participating", etc.
+    if (!matchesKnownCategory(line)) continue;
 
     const key = normKey(line);
     if (seen.has(key)) continue;
@@ -377,16 +448,23 @@ function extractAccommodations(rawText: string): {
   if (sec6.found) {
     sec6Accs = parseDateAnchoredBlocks(sec6.lines, "Section 6");
     if (sec6Accs.length === 0) {
+      // Fallback: scan for known accommodation keywords (checkbox-style Section 6)
       sec6Accs = extractSection6LineItems(sec6.lines);
     }
   }
 
   const accommodations = [...sec5Accs, ...sec6Accs];
 
-  // Warn on missing dates
+  // Warn only on records that are missing dates — suppress for Section 6 fallback
+  // items (no dates expected in checkbox-style sections) to avoid noise.
   for (const a of accommodations) {
-    if (!a.startDate) warnings.push(`Start Date missing for "${a.accommodationName}" (${a.sourceSection})`);
-    if (!a.endDate)   warnings.push(`End Date missing for "${a.accommodationName}" (${a.sourceSection})`);
+    const isDateAnchored = a.startDate !== null || a.endDate !== null;
+    // If the record has neither date, it came from the fallback — skip date warnings.
+    // Only warn when one date is present but the other is missing.
+    if (isDateAnchored) {
+      if (!a.startDate) warnings.push(`Start Date missing for "${a.accommodationName}" (${a.sourceSection})`);
+      if (!a.endDate)   warnings.push(`End Date missing for "${a.accommodationName}" (${a.sourceSection})`);
+    }
   }
 
   if (accommodations.length === 0) {
