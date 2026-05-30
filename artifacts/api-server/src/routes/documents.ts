@@ -106,7 +106,8 @@ router.post("/documents", upload.single("file"), async (req, res) => {
       try {
         const result = await parsePdf(req.file!.buffer);
 
-        const preview = result.rawText.slice(0, 1000);
+        const preview = result.rawText.slice(0, 5000);
+        const warnings = result.warnings.length > 0 ? JSON.stringify(result.warnings) : null;
 
         await db
           .update(documentsTable)
@@ -114,6 +115,7 @@ router.post("/documents", upload.single("file"), async (req, res) => {
             status: "parsed",
             parsedAt: new Date(),
             rawTextPreview: preview,
+            parseWarnings: warnings,
           })
           .where(eq(documentsTable.id, doc.id));
 
@@ -122,8 +124,13 @@ router.post("/documents", upload.single("file"), async (req, res) => {
             result.accommodations.map((a) => ({
               studentId: doc.studentId ?? null,
               documentId: doc.id,
+              accommodationName: a.accommodationName,
               category: a.category,
               description: a.description,
+              sourceSection: a.sourceSection,
+              startDate: a.startDate ?? null,
+              endDate: a.endDate ?? null,
+              location: a.location ?? null,
               rawText: a.rawText,
             }))
           );
@@ -201,8 +208,14 @@ router.get("/documents/:id", async (req, res) => {
       parsedAt: doc.parsedAt ?? null,
       parseError: doc.parseError ?? null,
       rawTextPreview: doc.rawTextPreview ?? null,
+      parseWarnings: doc.parseWarnings ? (JSON.parse(doc.parseWarnings) as string[]) : [],
       accommodations: accommodations.map((a) => ({
         ...a,
+        accommodationName: a.accommodationName ?? null,
+        sourceSection: a.sourceSection ?? null,
+        startDate: a.startDate ?? null,
+        endDate: a.endDate ?? null,
+        location: a.location ?? null,
         isApproved: a.isApproved ?? null,
         notes: a.notes ?? null,
         rawText: a.rawText ?? null,

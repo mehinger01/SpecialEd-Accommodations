@@ -12,8 +12,18 @@ export interface Accommodation {
   studentId: number | null;
   /** @nullable */
   documentId: number | null;
+  /** @nullable */
+  accommodationName: string | null;
   category: string;
   description: string;
+  /** @nullable */
+  sourceSection: string | null;
+  /** @nullable */
+  startDate: string | null;
+  /** @nullable */
+  endDate: string | null;
+  /** @nullable */
+  location: string | null;
   /** @nullable */
   rawText: string | null;
   isReviewed: boolean;

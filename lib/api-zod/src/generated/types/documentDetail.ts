@@ -26,5 +26,6 @@ export interface DocumentDetail {
   parseError: string | null;
   /** @nullable */
   rawTextPreview: string | null;
+  parseWarnings: string[];
   accommodations: Accommodation[];
 }

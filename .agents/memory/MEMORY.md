@@ -1,1 +1,2 @@
 - [Orval codegen barrel patch](orval-codegen-patch.md) — Orval regenerates index.ts with a types re-export that conflicts; patch script removes it after every codegen run.
+- [Vite stale module cache after codegen](vite-stale-cache.md) — After every codegen run, Vite's HMR fails with "Failed to load url /@fs/…/api-client-react/src/generated/api.ts"; fix is always restart_workflow on sped-app.

@@ -11,6 +11,7 @@ export const documentsTable = pgTable("documents", {
   studentId: integer("student_id").references(() => studentsTable.id, { onDelete: "set null" }),
   rawTextPreview: text("raw_text_preview"),
   parseError: text("parse_error"),
+  parseWarnings: text("parse_warnings"),
   uploadedAt: timestamp("uploaded_at", { withTimezone: true }).notNull().defaultNow(),
   parsedAt: timestamp("parsed_at", { withTimezone: true }),
 });

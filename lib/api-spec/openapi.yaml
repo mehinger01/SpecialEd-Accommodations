@@ -480,6 +480,10 @@ components:
           type: ["string", "null"]
         rawTextPreview:
           type: ["string", "null"]
+        parseWarnings:
+          type: array
+          items:
+            type: string
         accommodations:
           type: array
           items:
@@ -496,6 +500,7 @@ components:
         - parsedAt
         - parseError
         - rawTextPreview
+        - parseWarnings
         - accommodations
 
     CreateStudentBody:
@@ -588,10 +593,20 @@ components:
           type: ["integer", "null"]
         documentId:
           type: ["integer", "null"]
+        accommodationName:
+          type: ["string", "null"]
         category:
           type: string
         description:
           type: string
+        sourceSection:
+          type: ["string", "null"]
+        startDate:
+          type: ["string", "null"]
+        endDate:
+          type: ["string", "null"]
+        location:
+          type: ["string", "null"]
         rawText:
           type: ["string", "null"]
         isReviewed:
@@ -610,8 +625,13 @@ components:
         - id
         - studentId
         - documentId
+        - accommodationName
         - category
         - description
+        - sourceSection
+        - startDate
+        - endDate
+        - location
         - rawText
         - isReviewed
         - isApproved

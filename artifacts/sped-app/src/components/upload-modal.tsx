@@ -5,7 +5,6 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   getListDocumentsQueryKey,
@@ -16,7 +15,10 @@ import {
   getGetRecentActivityQueryKey,
 } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, FileText, CheckCircle2, XCircle, ChevronDown, ChevronUp, UserPlus } from "lucide-react";
+import {
+  Loader2, FileText, CheckCircle2, XCircle, ChevronDown, ChevronUp,
+  UserPlus, AlertTriangle,
+} from "lucide-react";
 
 interface UploadModalProps {
   open: boolean;
@@ -27,15 +29,20 @@ type UploadPhase = "idle" | "creating-student" | "uploading" | "polling" | "done
 
 interface ParsedAccommodation {
   id: number;
+  accommodationName: string | null;
   category: string;
   description: string;
-  rawText: string | null;
+  sourceSection: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  location: string | null;
 }
 
 interface ParseResult {
   docId: number;
   filename: string;
   accommodations: ParsedAccommodation[];
+  warnings: string[];
   rawText: string | null;
   parseError: string | null;
 }
@@ -85,22 +92,15 @@ export function UploadModal({ open, onOpenChange }: UploadModalProps) {
   async function pollDocument(docId: number, filename: string) {
     let attempts = 0;
     const maxAttempts = 30;
-
     setPhase("polling");
     setStatusMessage("Parsing PDF for accommodations…");
 
     pollIntervalRef.current = setInterval(async () => {
       attempts++;
-      console.log(`[upload-modal] poll attempt ${attempts} for doc ${docId}`);
-
       try {
         const res = await fetch(`/api/documents/${docId}`);
-        if (!res.ok) {
-          console.error(`[upload-modal] poll failed status=${res.status}`);
-          return;
-        }
+        if (!res.ok) return;
         const doc = await res.json();
-        console.log("[upload-modal] poll response:", doc);
 
         if (doc.status === "parsed") {
           stopPolling();
@@ -108,6 +108,7 @@ export function UploadModal({ open, onOpenChange }: UploadModalProps) {
             docId,
             filename,
             accommodations: doc.accommodations ?? [],
+            warnings: doc.parseWarnings ?? [],
             rawText: doc.rawTextPreview ?? null,
             parseError: null,
           });
@@ -119,11 +120,11 @@ export function UploadModal({ open, onOpenChange }: UploadModalProps) {
           queryClient.invalidateQueries({ queryKey: getListStudentsQueryKey() });
         } else if (doc.status === "error") {
           stopPolling();
-          console.error("[upload-modal] parse error:", doc.parseError);
           setResult({
             docId,
             filename,
             accommodations: [],
+            warnings: [],
             rawText: doc.rawTextPreview ?? null,
             parseError: doc.parseError ?? "Unknown parse error",
           });
@@ -132,21 +133,18 @@ export function UploadModal({ open, onOpenChange }: UploadModalProps) {
           queryClient.invalidateQueries({ queryKey: getListDocumentsQueryKey() });
         } else if (attempts >= maxAttempts) {
           stopPolling();
-          console.error("[upload-modal] polling timed out");
           setPhase("error");
           setStatusMessage("Parsing timed out. Check the Documents page for status.");
           queryClient.invalidateQueries({ queryKey: getListDocumentsQueryKey() });
         }
-      } catch (err) {
-        console.error("[upload-modal] poll threw:", err);
+      } catch (_err) {
+        // network hiccup, keep polling
       }
     }, 1500);
   }
 
   async function handleUpload() {
     if (!file) return;
-
-    console.log("[upload-modal] starting upload:", file.name, "type:", documentType, "student:", studentId);
     setResult(null);
 
     try {
@@ -160,21 +158,13 @@ export function UploadModal({ open, onOpenChange }: UploadModalProps) {
         }
         setPhase("creating-student");
         setStatusMessage(`Creating student "${name}"…`);
-        console.log("[upload-modal] creating new student:", name);
 
         const created = await new Promise<{ id: number }>((resolve, reject) => {
           createStudent.mutate(
             { data: { displayName: name } },
             {
-              onSuccess: (s) => {
-                console.log("[upload-modal] student created:", s);
-                queryClient.invalidateQueries({ queryKey: getListStudentsQueryKey() });
-                resolve(s);
-              },
-              onError: (err) => {
-                console.error("[upload-modal] student creation failed:", err);
-                reject(err);
-              },
+              onSuccess: (s) => { queryClient.invalidateQueries({ queryKey: getListStudentsQueryKey() }); resolve(s); },
+              onError: reject,
             }
           );
         });
@@ -187,34 +177,19 @@ export function UploadModal({ open, onOpenChange }: UploadModalProps) {
       const formData = new FormData();
       formData.append("file", file);
       formData.append("documentType", documentType);
-      if (resolvedStudentId !== "none") {
-        formData.append("studentId", resolvedStudentId);
-      }
+      if (resolvedStudentId !== "none") formData.append("studentId", resolvedStudentId);
 
-      const res = await fetch("/api/documents", {
-        method: "POST",
-        body: formData,
-      });
-
-      console.log("[upload-modal] upload response status:", res.status);
+      const res = await fetch("/api/documents", { method: "POST", body: formData });
 
       if (!res.ok) {
         const body = await res.text();
-        console.error("[upload-modal] upload failed:", res.status, body);
         throw new Error(`Upload failed (${res.status}): ${body}`);
       }
 
       const doc = await res.json();
-      console.log("[upload-modal] upload success, doc:", doc);
-
-      toast({
-        title: "Document Uploaded",
-        description: "Upload successful. Parsing accommodations…",
-      });
-
+      toast({ title: "Document Uploaded", description: "Upload successful. Parsing accommodations…" });
       await pollDocument(doc.id, doc.filename);
     } catch (err) {
-      console.error("[upload-modal] threw:", err);
       setPhase("error");
       setStatusMessage(err instanceof Error ? err.message : String(err));
       toast({
@@ -231,7 +206,7 @@ export function UploadModal({ open, onOpenChange }: UploadModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose(); }}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[760px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Upload Document</DialogTitle>
           <DialogDescription>
@@ -264,9 +239,7 @@ export function UploadModal({ open, onOpenChange }: UploadModalProps) {
               <div className="space-y-2">
                 <Label>Document Type</Label>
                 <Select value={documentType} onValueChange={setDocumentType} disabled={isWorking}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="IEP">IEP</SelectItem>
                     <SelectItem value="504">504 Plan</SelectItem>
@@ -278,10 +251,12 @@ export function UploadModal({ open, onOpenChange }: UploadModalProps) {
 
               <div className="space-y-2">
                 <Label>Student</Label>
-                <Select value={studentId} onValueChange={(v) => { setStudentId(v); if (v !== "new") setNewStudentName(""); }} disabled={isWorking}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select or create…" />
-                  </SelectTrigger>
+                <Select
+                  value={studentId}
+                  onValueChange={(v) => { setStudentId(v); if (v !== "new") setNewStudentName(""); }}
+                  disabled={isWorking}
+                >
+                  <SelectTrigger><SelectValue placeholder="Select or create…" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">— Unassigned —</SelectItem>
                     <SelectItem value="new">
@@ -320,7 +295,7 @@ export function UploadModal({ open, onOpenChange }: UploadModalProps) {
                   autoFocus
                 />
                 <p className="text-xs text-muted-foreground">
-                  A student record will be created automatically before uploading. You can add grade, case manager, and plan type from the Students page later.
+                  A student record will be created automatically before uploading. Grade, case manager, and plan type can be added from the Students page later.
                 </p>
               </div>
             )}
@@ -336,55 +311,96 @@ export function UploadModal({ open, onOpenChange }: UploadModalProps) {
 
         {isDone && result && (
           <div className="space-y-4 py-2">
+            {/* Status banner */}
             <div className={`flex items-start gap-3 rounded-lg px-4 py-3 text-sm ${
               phase === "done"
                 ? "bg-green-50 text-green-800 border border-green-200"
                 : "bg-destructive/10 text-destructive border border-destructive/20"
             }`}>
-              {phase === "done"
-                ? <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" />
-                : <XCircle className="w-4 h-4 mt-0.5 shrink-0" />
-              }
+              {phase === "done" ? <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" /> : <XCircle className="w-4 h-4 mt-0.5 shrink-0" />}
               <div>
                 <span className="font-medium">{phase === "done" ? "Parsing complete" : "Parse error"}</span>
                 <p className="mt-0.5 opacity-80">{statusMessage}</p>
               </div>
             </div>
 
+            {/* Warnings */}
+            {result.warnings.length > 0 && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 space-y-1">
+                <div className="flex items-center gap-2 text-sm font-medium text-amber-800">
+                  <AlertTriangle className="w-4 h-4 shrink-0" />
+                  {result.warnings.length === 1 ? "1 Warning" : `${result.warnings.length} Warnings`}
+                </div>
+                <ul className="space-y-0.5">
+                  {result.warnings.map((w, i) => (
+                    <li key={i} className="text-xs text-amber-700 pl-6">• {w}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Accommodations table */}
             {phase === "done" && result.accommodations.length > 0 && (
               <div className="space-y-2">
-                <h4 className="text-sm font-semibold text-foreground">Extracted Accommodations</h4>
-                <div className="border rounded-md overflow-hidden">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-muted/30">
-                        <TableHead className="w-[160px]">Category</TableHead>
-                        <TableHead>Description</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {result.accommodations.map((a) => (
-                        <TableRow key={a.id}>
-                          <TableCell>
-                            <Badge variant="outline" className="text-xs font-medium capitalize whitespace-nowrap">
-                              {a.category}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-sm">{a.description}</TableCell>
-                        </TableRow>
+                <h4 className="text-sm font-semibold text-foreground">
+                  Extracted Accommodations ({result.accommodations.length})
+                </h4>
+                <div className="border rounded-md overflow-auto max-h-72">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="bg-muted/40 border-b text-left">
+                        <th className="px-3 py-2 font-semibold whitespace-nowrap">Accommodation Name</th>
+                        <th className="px-3 py-2 font-semibold whitespace-nowrap">Section</th>
+                        <th className="px-3 py-2 font-semibold whitespace-nowrap">Start Date</th>
+                        <th className="px-3 py-2 font-semibold whitespace-nowrap">End Date</th>
+                        <th className="px-3 py-2 font-semibold">Description</th>
+                        <th className="px-3 py-2 font-semibold">Location</th>
+                        <th className="px-3 py-2 font-semibold whitespace-nowrap">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {result.accommodations.map((a, i) => (
+                        <tr key={a.id} className={i % 2 === 0 ? "bg-background" : "bg-muted/20"}>
+                          <td className="px-3 py-2 font-medium max-w-[180px]">
+                            {a.accommodationName || a.category}
+                          </td>
+                          <td className="px-3 py-2 whitespace-nowrap">
+                            {a.sourceSection ? (
+                              <Badge variant="outline" className="text-[10px] font-medium">
+                                {a.sourceSection}
+                              </Badge>
+                            ) : "—"}
+                          </td>
+                          <td className="px-3 py-2 whitespace-nowrap text-muted-foreground">
+                            {a.startDate || <span className="text-amber-600">Missing</span>}
+                          </td>
+                          <td className="px-3 py-2 whitespace-nowrap text-muted-foreground">
+                            {a.endDate || <span className="text-amber-600">Missing</span>}
+                          </td>
+                          <td className="px-3 py-2 text-muted-foreground max-w-[200px] truncate" title={a.description}>
+                            {a.description || "—"}
+                          </td>
+                          <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">
+                            {a.location || "—"}
+                          </td>
+                          <td className="px-3 py-2 whitespace-nowrap">
+                            <Badge variant="secondary" className="text-[10px]">Pending Review</Badge>
+                          </td>
+                        </tr>
                       ))}
-                    </TableBody>
-                  </Table>
+                    </tbody>
+                  </table>
                 </div>
               </div>
             )}
 
             {phase === "done" && result.accommodations.length === 0 && (
               <p className="text-sm text-muted-foreground bg-muted/30 rounded px-4 py-3">
-                No accommodations were extracted. The PDF may not contain recognizable patterns or the text may not be machine-readable. Check the document detail page for the raw text preview.
+                No accommodations were extracted. Check the warnings above, review the raw text preview on the document page, or try a different PDF.
               </p>
             )}
 
+            {/* JSON debug */}
             <div className="space-y-1">
               <button
                 type="button"
@@ -392,7 +408,7 @@ export function UploadModal({ open, onOpenChange }: UploadModalProps) {
                 className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
               >
                 {showJson ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                {showJson ? "Hide" : "Show"} JSON debug output
+                {showJson ? "Hide" : "Show"} raw JSON
               </button>
               {showJson && (
                 <pre className="bg-muted/50 border rounded p-3 text-xs overflow-x-auto max-h-48 text-foreground">
@@ -425,9 +441,7 @@ export function UploadModal({ open, onOpenChange }: UploadModalProps) {
             </>
           ) : (
             <>
-              <Button variant="outline" onClick={handleClose} disabled={isWorking}>
-                Cancel
-              </Button>
+              <Button variant="outline" onClick={handleClose} disabled={isWorking}>Cancel</Button>
               <Button onClick={handleUpload} disabled={!canSubmit}>
                 {isWorking && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                 {phase === "creating-student" ? "Creating Student…"
