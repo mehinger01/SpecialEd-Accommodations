@@ -14,6 +14,8 @@ export interface Student {
   caseManager: string;
   planType: StudentPlanType;
   accommodationCount: number;
+  pendingCount: number;
+  approvedCount: number;
   documentCount: number;
   createdAt: Date;
 }

@@ -552,6 +552,10 @@ components:
           enum: [IEP, "504", BIP, NONE]
         accommodationCount:
           type: integer
+        pendingCount:
+          type: integer
+        approvedCount:
+          type: integer
         documentCount:
           type: integer
         createdAt:
@@ -564,6 +568,8 @@ components:
         - caseManager
         - planType
         - accommodationCount
+        - pendingCount
+        - approvedCount
         - documentCount
         - createdAt
 

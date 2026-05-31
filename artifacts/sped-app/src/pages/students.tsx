@@ -67,7 +67,9 @@ export default function Students() {
                   <TableHead>Grade</TableHead>
                   <TableHead>Plan Type</TableHead>
                   <TableHead>Case Manager</TableHead>
-                  <TableHead>Accommodations</TableHead>
+                  <TableHead className="text-center">Pending</TableHead>
+                  <TableHead className="text-center">Approved</TableHead>
+                  <TableHead className="text-center">Total</TableHead>
                   <TableHead>Documents</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -80,14 +82,16 @@ export default function Students() {
                       <TableCell><Skeleton className="h-4 w-8" /></TableCell>
                       <TableCell><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
                       <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-                      <TableCell><Skeleton className="h-4 w-8" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-8 mx-auto" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-8 mx-auto" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-8 mx-auto" /></TableCell>
                       <TableCell><Skeleton className="h-4 w-8" /></TableCell>
                       <TableCell><Skeleton className="h-4 w-16 ml-auto" /></TableCell>
                     </TableRow>
                   ))
                 ) : students?.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="h-48 text-center text-muted-foreground">
+                    <TableCell colSpan={9} className="h-48 text-center text-muted-foreground">
                       No students found.
                     </TableCell>
                   </TableRow>
@@ -111,7 +115,17 @@ export default function Students() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-muted-foreground">{student.caseManager}</TableCell>
-                      <TableCell><div className="font-medium">{student.accommodationCount}</div></TableCell>
+                      <TableCell className="text-center">
+                        {student.pendingCount > 0
+                          ? <span className="font-medium text-amber-600">{student.pendingCount}</span>
+                          : <span className="text-muted-foreground">0</span>}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <span className="font-medium">{student.approvedCount}</span>
+                      </TableCell>
+                      <TableCell className="text-center text-muted-foreground text-sm">
+                        {student.accommodationCount}
+                      </TableCell>
                       <TableCell>{student.documentCount}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">

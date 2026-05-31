@@ -125,6 +125,8 @@ export const ListStudentsResponseItem = zod.object({
   "caseManager": zod.string(),
   "planType": zod.enum(['IEP', '504', 'BIP', 'NONE']),
   "accommodationCount": zod.number(),
+  "pendingCount": zod.number(),
+  "approvedCount": zod.number(),
   "documentCount": zod.number(),
   "createdAt": zod.coerce.date()
 })
@@ -205,6 +207,8 @@ export const DeleteStudentResponse = zod.object({
   "caseManager": zod.string(),
   "planType": zod.enum(['IEP', '504', 'BIP', 'NONE']),
   "accommodationCount": zod.number(),
+  "pendingCount": zod.number(),
+  "approvedCount": zod.number(),
   "documentCount": zod.number(),
   "createdAt": zod.coerce.date()
 })

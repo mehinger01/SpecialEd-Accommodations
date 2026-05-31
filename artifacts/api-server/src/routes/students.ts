@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, studentsTable, documentsTable, accommodationsTable, activityLogTable } from "@workspace/db";
-import { eq, ilike, or, count, inArray } from "drizzle-orm";
+import { eq, ilike, or, count, inArray, and } from "drizzle-orm";
 
 const router = Router();
 
@@ -22,7 +22,7 @@ router.get("/students", async (req, res) => {
       })
       .from(studentsTable);
 
-    const [students, accomCounts, docCounts] = await Promise.all([
+    const [students, accomCounts, pendingCounts, approvedCounts, docCounts] = await Promise.all([
       search
         ? base.where(or(
             ilike(studentsTable.displayName, `%${search}%`),
@@ -33,18 +33,30 @@ router.get("/students", async (req, res) => {
       db.select({ studentId: accommodationsTable.studentId, cnt: count(accommodationsTable.id) })
         .from(accommodationsTable)
         .groupBy(accommodationsTable.studentId),
+      db.select({ studentId: accommodationsTable.studentId, cnt: count(accommodationsTable.id) })
+        .from(accommodationsTable)
+        .where(eq(accommodationsTable.isReviewed, false))
+        .groupBy(accommodationsTable.studentId),
+      db.select({ studentId: accommodationsTable.studentId, cnt: count(accommodationsTable.id) })
+        .from(accommodationsTable)
+        .where(and(eq(accommodationsTable.isReviewed, true), eq(accommodationsTable.isApproved, true)))
+        .groupBy(accommodationsTable.studentId),
       db.select({ studentId: documentsTable.studentId, cnt: count(documentsTable.id) })
         .from(documentsTable)
         .groupBy(documentsTable.studentId),
     ]);
 
-    const accomMap = new Map(accomCounts.map(r => [r.studentId, Number(r.cnt)]));
-    const docMap   = new Map(docCounts.map(r => [r.studentId, Number(r.cnt)]));
+    const accomMap   = new Map(accomCounts.map(r => [r.studentId, Number(r.cnt)]));
+    const pendingMap = new Map(pendingCounts.map(r => [r.studentId, Number(r.cnt)]));
+    const approvedMap = new Map(approvedCounts.map(r => [r.studentId, Number(r.cnt)]));
+    const docMap     = new Map(docCounts.map(r => [r.studentId, Number(r.cnt)]));
 
     res.json(
       students.map(s => ({
         ...s,
         accommodationCount: accomMap.get(s.id) ?? 0,
+        pendingCount:       pendingMap.get(s.id) ?? 0,
+        approvedCount:      approvedMap.get(s.id) ?? 0,
         documentCount:      docMap.get(s.id) ?? 0,
       }))
     );
