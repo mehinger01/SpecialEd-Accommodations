@@ -249,34 +249,34 @@ export function UploadModal({ open, onOpenChange }: UploadModalProps) {
                 </Select>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label>Student</Label>
                 <Select
                   value={studentId}
                   onValueChange={(v) => { setStudentId(v); if (v !== "new") setNewStudentName(""); }}
                   disabled={isWorking}
                 >
-                  <SelectTrigger><SelectValue placeholder="Select or create…" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="— Unassigned —" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">— Unassigned —</SelectItem>
-                    <SelectItem value="new">
-                      <span className="flex items-center gap-2 text-primary font-medium">
-                        <UserPlus className="w-3.5 h-3.5" />
-                        Create New Student…
-                      </span>
-                    </SelectItem>
-                    {students && students.length > 0 && (
-                      <>
-                        <div className="px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
-                          Existing Students
-                        </div>
-                        {students.map((s) => (
-                          <SelectItem key={s.id} value={s.id.toString()}>{s.displayName}</SelectItem>
-                        ))}
-                      </>
-                    )}
+                    {students && students.length > 0 &&
+                      students.map((s) => (
+                        <SelectItem key={s.id} value={s.id.toString()}>{s.displayName}</SelectItem>
+                      ))
+                    }
                   </SelectContent>
                 </Select>
+                {studentId !== "new" && (
+                  <button
+                    type="button"
+                    disabled={isWorking}
+                    onClick={() => setStudentId("new")}
+                    className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <UserPlus className="w-3 h-3" />
+                    Create New Student
+                  </button>
+                )}
               </div>
             </div>
 
