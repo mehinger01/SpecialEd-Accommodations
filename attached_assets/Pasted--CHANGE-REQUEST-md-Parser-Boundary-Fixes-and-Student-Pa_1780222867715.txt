@@ -1,0 +1,304 @@
+# CHANGE_REQUEST.md
+# Parser Boundary Fixes and Student Page UX
+
+## Objective
+
+The parser is very close to correct.
+
+The latest JSON output reveals two remaining extraction defects and one workflow usability issue.
+
+This change request addresses only:
+
+1. Accommodation title boundary detection
+2. Location extraction
+3. Student page accommodation visibility
+
+Do not change:
+
+- Upload workflow
+- Student deletion
+- Document deletion
+- Accommodation deletion
+- Section 6 whitelist logic
+- Page 1 parsing
+- Dashboard statistics
+
+---
+
+# Issue 1: Location Text Is Bleeding Into Accommodation Names
+
+## Current Incorrect Output
+
+Examples:
+
+```text
+General and Special Education Reduced writing
+```
+
+```text
+General and Special Education Behavior Intervention Plan
+```
+
+## Root Cause
+
+The title assembly logic is scanning backward from Start Date and incorrectly including location text as part of the accommodation title.
+
+The parser is currently assembling:
+
+```text
+General and Special Education
+Reduced writing
+```
+
+into:
+
+```text
+General and Special Education Reduced writing
+```
+
+instead of:
+
+```text
+Reduced writing
+```
+
+The same issue occurs with:
+
+```text
+Behavior Intervention Plan
+```
+
+---
+
+## Required Behavior
+
+Location text must never become part of an accommodation title.
+
+The following text should be treated as a location value:
+
+```text
+General and Special Education
+```
+
+and never as part of the title.
+
+Expected result:
+
+```json
+{
+  "accommodationName": "Reduced writing",
+  "location": "General and Special Education"
+}
+```
+
+and
+
+```json
+{
+  "accommodationName": "Behavior Intervention Plan",
+  "location": "General and Special Education"
+}
+```
+
+---
+
+# Issue 2: Location Extraction Is Not Working
+
+## Current Problem
+
+All current records show:
+
+```json
+{
+  "location": null
+}
+```
+
+even when the source text clearly contains:
+
+```text
+General and Special Education
+```
+
+multiple times.
+
+---
+
+## Required Behavior
+
+When any of the following patterns are detected:
+
+```text
+General and Special Education
+```
+
+```text
+General
+and
+Special
+Education
+```
+
+```text
+General and Special
+Education
+```
+
+normalize them into:
+
+```text
+General and Special Education
+```
+
+and store:
+
+```json
+{
+  "location": "General and Special Education"
+}
+```
+
+Remove the location text from:
+
+- accommodationName
+- description
+
+after extraction.
+
+---
+
+# Issue 3: Student Page Hides Accommodations
+
+## Current Problem
+
+The Student page shows:
+
+```text
+Active Accommodations: 0
+```
+
+while simultaneously showing:
+
+```text
+8 pending review
+```
+
+and a linked document.
+
+A normal user will assume no accommodations were found.
+
+The user must discover that accommodations are hidden behind a linked document.
+
+This is not intuitive.
+
+---
+
+## Required Behavior
+
+Display accommodation counts directly on the Student page.
+
+Example:
+
+```text
+Pending Accommodations: 8
+Approved Accommodations: 0
+```
+
+If accommodations exist but are not yet approved:
+
+Show a section:
+
+```text
+Pending Accommodation Review
+```
+
+with the accommodation list directly visible.
+
+Do not force the user to click through a document link to discover accommodations.
+
+---
+
+## Student Page Display Rules
+
+If accommodations exist:
+
+Display:
+
+- Pending count
+- Approved count
+
+If pending accommodations exist:
+
+Display the accommodation list directly.
+
+If approved accommodations exist:
+
+Display them in the Active Accommodations section.
+
+The Student page should become the primary accommodation view.
+
+The document page should remain the detailed review view.
+
+---
+
+# Expected Output After Fix
+
+## Section 5
+
+1. Universal Tools: Administration of the assessment in an alternate education setting (in school) with appropriate supervision - Special education setting (NE)
+
+2. Alternative testing location
+
+3. Reduced writing
+
+4. Breaks
+
+5. Behavior Intervention Plan
+
+---
+
+## Location
+
+Every Section 5 accommodation should contain:
+
+```json
+{
+  "location": "General and Special Education"
+}
+```
+
+when present in the source text.
+
+---
+
+## Student Page
+
+Example:
+
+```text
+Pending Accommodations: 8
+Approved Accommodations: 0
+```
+
+with accommodations visible directly on the page.
+
+No hidden workflow requiring users to discover accommodations through linked documents.
+
+---
+
+# Definition of Done
+
+This change is complete only when:
+
+1. No accommodation name contains "General and Special Education".
+2. Reduced writing is extracted correctly.
+3. Behavior Intervention Plan is extracted correctly.
+4. Location is populated when present.
+5. Location is removed from accommodation titles.
+6. Location is removed from descriptions.
+7. Pending accommodation count is visible on the Student page.
+8. Approved accommodation count is visible on the Student page.
+9. Pending accommodations can be viewed directly from the Student page.
+10. Users do not need to open a linked document to discover accommodations.
+11. Section 6 behavior remains unchanged.
+12. No regressions are introduced into existing parser functionality.

@@ -357,29 +357,45 @@ function findSection(
 //      - IEP boilerplate → stripped via stripBoilerplate().
 //   6. Deduplicate by normalized accommodation name.
 
+// Matches location phrases that may appear fused or standalone in titles/descriptions.
+// Used to strip location text from assembled strings after extraction.
+const LOCATION_STRIP_RE = /\b(general\s+and\s+special\s+education|special\s+education(?:\s+(?:only|setting))?|general\s+education(?:\s+(?:only|setting))?|co[- ]?taught(?:\s+classroom)?|resource\s+room|self[- ]contained)\b/gi;
+
+function stripLocationFromText(text: string): string {
+  return text.replace(LOCATION_STRIP_RE, "").replace(/\s{2,}/g, " ").trim();
+}
+
 interface TitleRange {
-  start: number;  // earliest line index (furthest from Start Date)
-  end: number;    // latest line index (closest to Start Date)
-  name: string;   // full joined accommodation title
+  start: number;   // earliest line index (furthest from Start Date)
+  end: number;     // latest line index (closest to Start Date)
+  name: string;    // full joined accommodation title
+  location: string | null;  // location value found during backward scan
 }
 
 function computeTitleRange(cleaned: string[], sdIdx: number): TitleRange | null {
   const lines: string[] = [];
   let start = -1;
   let end = -1;
+  let foundLocation: string | null = null;
 
   for (let i = sdIdx - 1; i >= Math.max(0, sdIdx - 15); i--) {
     const line = cleaned[i];
     // Blank line → hard boundary; stop immediately.
     if (!line || line.length < 2) break;
-    // Category / section header → boundary; stop (don't include this line).
-    if (isIgnoreHeader(line)) break;
     // Date from a previous block → boundary.
     if (isDateLine(line) || ANY_DATE_RE.test(line)) break;
-    // Bare "Location:" label → skip but don't stop.
+    // Explicit "Location:" label → skip but don't stop.
     if (LOCATION_RE.test(line)) continue;
-    // Known bare location value → skip but don't stop.
-    if (LOCATION_VALUE_RE.test(line)) continue;
+    // Known bare location value → capture and skip, but do NOT break.
+    // Must be checked BEFORE isIgnoreHeader because "General and Special Education"
+    // appears in both IGNORE_HEADERS (old break path) and LOCATION_VALUE_RE (skip path).
+    // We want to capture it as location and continue scanning backward for the real title.
+    if (LOCATION_VALUE_RE.test(line)) {
+      if (!foundLocation) foundLocation = line;
+      continue;
+    }
+    // Category / section header → boundary; stop (don't include this line).
+    if (isIgnoreHeader(line)) break;
 
     // Valid title line.
     lines.unshift(line); // prepend → forward order
@@ -388,7 +404,7 @@ function computeTitleRange(cleaned: string[], sdIdx: number): TitleRange | null 
   }
 
   if (lines.length === 0) return null;
-  return { start, end, name: lines.join(" ").replace(/\s+/g, " ").trim() };
+  return { start, end, name: lines.join(" ").replace(/\s+/g, " ").trim(), location: foundLocation };
 }
 
 function parseDateAnchoredBlocks(
@@ -418,7 +434,10 @@ function parseDateAnchoredBlocks(
     const range = titleRanges[d];
     if (!range) continue;
 
-    const accommodationName = stripBoilerplate(range.name);
+    // Strip boilerplate and location phrases from the assembled title.
+    // Location phrases (e.g. "General and Special Education") can be fused into
+    // the title when PDF text extraction omits line breaks between adjacent fields.
+    const accommodationName = stripLocationFromText(stripBoilerplate(range.name)) || stripBoilerplate(range.name);
 
     // Description upper bound: stop at the EARLIEST line of the next block's title.
     const nextTitleStart =
@@ -447,11 +466,11 @@ function parseDateAnchoredBlocks(
 
     // ── Description + location ────────────────────────────────────────────────
     // Collect from after End Date up to (not including) next block's title start.
-    // Fix 3: check location patterns BEFORE the ignore-header filter so that
-    //        "General and Special Education" is captured as location, not silently dropped.
-    // Fix 2: stripBoilerplate() removes IEP compliance boilerplate from the joined text.
+    // Location priority: title-range scan → description-range scan.
+    // Strip location text from descriptions the same way we strip from names.
     const descParts: string[] = [];
-    let location: string | null = null;
+    // Seed location from the backward title-range scan (computeTitleRange captures it).
+    let location: string | null = range.location;
 
     for (let i = edIdx + 1; i < nextTitleStart; i++) {
       const line = cleaned[i];
@@ -465,7 +484,7 @@ function parseDateAnchoredBlocks(
         continue;
       }
 
-      // Bare location value (Fix 3) → capture before the ignore-header check.
+      // Bare location value → capture before the ignore-header check.
       if (LOCATION_VALUE_RE.test(line)) {
         if (!location) location = line;
         continue;
@@ -476,8 +495,8 @@ function parseDateAnchoredBlocks(
       descParts.push(line);
     }
 
-    // Fix 2: strip boilerplate from joined description.
-    const description = stripBoilerplate(descParts.join(" ").trim());
+    // Strip boilerplate and any residual location phrases from description.
+    const description = stripLocationFromText(stripBoilerplate(descParts.join(" ").trim()));
 
     const key = normKey(accommodationName);
     if (seen.has(key)) continue;

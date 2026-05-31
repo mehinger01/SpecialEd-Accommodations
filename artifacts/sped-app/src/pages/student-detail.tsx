@@ -4,7 +4,7 @@ import { useParams, Link, useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ChevronLeft, FileText, CheckCircle2, User, GraduationCap, Briefcase, Trash2 } from "lucide-react";
+import { ChevronLeft, FileText, CheckCircle2, User, GraduationCap, Briefcase, Trash2, Clock } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { useQueryClient } from "@tanstack/react-query";
@@ -61,14 +61,14 @@ export default function StudentDetail() {
     );
   }
 
-  const accommodationsByCategory = student.accommodations.reduce((acc, curr) => {
-    if (!curr.isApproved) return acc;
+  const pendingAccommodations = student.accommodations.filter(a => !a.isReviewed);
+  const approvedAccommodations = student.accommodations.filter(a => a.isApproved);
+
+  const approvedByCategory = approvedAccommodations.reduce((acc, curr) => {
     if (!acc[curr.category]) acc[curr.category] = [];
     acc[curr.category].push(curr);
     return acc;
   }, {} as Record<string, typeof student.accommodations>);
-
-  const unreviewedCount = student.accommodations.filter(a => !a.isReviewed).length;
 
   return (
     <Layout>
@@ -78,6 +78,7 @@ export default function StudentDetail() {
             <ChevronLeft className="w-4 h-4 mr-1" /> Back to Students
           </Link>
 
+          {/* Header */}
           <div className="flex flex-col md:flex-row gap-6 md:items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="h-16 w-16 bg-primary/10 rounded-full flex items-center justify-center text-primary">
@@ -97,8 +98,14 @@ export default function StudentDetail() {
                 {student.planType} Plan
               </Badge>
               <div className="bg-card border rounded-md px-4 py-1.5 flex flex-col justify-center">
-                <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Active Accoms</span>
-                <span className="font-bold text-lg leading-none mt-1">{student.accommodations.filter(a => a.isApproved).length}</span>
+                <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Pending Review</span>
+                <span className={`font-bold text-lg leading-none mt-1 ${pendingAccommodations.length > 0 ? "text-amber-600" : ""}`}>
+                  {pendingAccommodations.length}
+                </span>
+              </div>
+              <div className="bg-card border rounded-md px-4 py-1.5 flex flex-col justify-center">
+                <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Approved</span>
+                <span className="font-bold text-lg leading-none mt-1">{approvedAccommodations.length}</span>
               </div>
               <Button
                 variant="outline"
@@ -114,48 +121,99 @@ export default function StudentDetail() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 space-y-6">
-              <div className="flex items-center justify-between border-b pb-2">
-                <h2 className="text-xl font-semibold">Active Accommodations</h2>
-                {unreviewedCount > 0 && (
-                  <Badge variant="secondary" className="bg-amber-100 text-amber-800 hover:bg-amber-100 border-amber-200">
-                    {unreviewedCount} pending review
-                  </Badge>
-                )}
-              </div>
+            <div className="lg:col-span-2 space-y-8">
 
-              {Object.keys(accommodationsByCategory).length === 0 ? (
-                <div className="bg-muted border p-8 rounded-lg text-center text-muted-foreground">
-                  No active accommodations found. Upload and review a document to add accommodations.
-                </div>
-              ) : (
-                <div className="space-y-8">
-                  {Object.entries(accommodationsByCategory).map(([category, items]) => (
-                    <div key={category} className="space-y-3">
-                      <h3 className="font-medium text-primary uppercase text-sm tracking-wider flex items-center gap-2">
-                        {category}
-                        <span className="bg-muted text-muted-foreground px-2 py-0.5 rounded-full text-xs">{items.length}</span>
-                      </h3>
-                      <div className="grid gap-3">
-                        {items.map(acc => (
-                          <Card key={acc.id} className="border-l-4 border-l-primary">
-                            <CardContent className="p-4 flex gap-4 items-start">
-                              <CheckCircle2 className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                              <div>
-                                <p className="font-medium text-sm leading-snug">{acc.description}</p>
-                                {acc.notes && <p className="text-xs text-muted-foreground mt-2 italic border-l-2 pl-2">Note: {acc.notes}</p>}
-                                <p className="text-[10px] text-muted-foreground mt-3 uppercase tracking-wider">Source Doc ID: {acc.documentId}</p>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
+              {/* Pending Review section */}
+              {pendingAccommodations.length > 0 && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 border-b pb-2">
+                    <h2 className="text-xl font-semibold">Pending Accommodation Review</h2>
+                    <Badge variant="secondary" className="bg-amber-100 text-amber-800 hover:bg-amber-100 border-amber-200">
+                      {pendingAccommodations.length}
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground -mt-2">
+                    These accommodations were extracted but not yet reviewed.{" "}
+                    <Link href={`/documents/${pendingAccommodations[0]?.documentId}`} className="text-primary hover:underline">
+                      Open the document →
+                    </Link>
+                  </p>
+                  <div className="grid gap-3">
+                    {pendingAccommodations.map(acc => (
+                      <Card key={acc.id} className="border-l-4 border-l-amber-400">
+                        <CardContent className="p-4 flex gap-3 items-start">
+                          <Clock className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                          <div className="min-w-0">
+                            <p className="font-medium text-sm leading-snug">
+                              {acc.accommodationName || acc.description || acc.category}
+                            </p>
+                            {acc.accommodationName && acc.description && acc.description !== acc.accommodationName && (
+                              <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{acc.description}</p>
+                            )}
+                            <div className="flex items-center gap-2 mt-2">
+                              <Badge variant="outline" className="text-[10px]">{acc.category}</Badge>
+                              {acc.sourceSection && (
+                                <span className="text-[10px] text-muted-foreground">{acc.sourceSection}</span>
+                              )}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
                 </div>
               )}
+
+              {/* Approved / Active section */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 border-b pb-2">
+                  <h2 className="text-xl font-semibold">Active Accommodations</h2>
+                  <span className="bg-muted text-muted-foreground px-2 py-0.5 rounded-full text-xs font-medium">
+                    {approvedAccommodations.length}
+                  </span>
+                </div>
+
+                {Object.keys(approvedByCategory).length === 0 ? (
+                  <div className="bg-muted border p-8 rounded-lg text-center text-muted-foreground text-sm">
+                    {student.accommodations.length > 0
+                      ? "No accommodations have been approved yet. Review them in the linked document."
+                      : "No accommodations found. Upload and review a document to add accommodations."}
+                  </div>
+                ) : (
+                  <div className="space-y-8">
+                    {Object.entries(approvedByCategory).map(([category, items]) => (
+                      <div key={category} className="space-y-3">
+                        <h3 className="font-medium text-primary uppercase text-sm tracking-wider flex items-center gap-2">
+                          {category}
+                          <span className="bg-muted text-muted-foreground px-2 py-0.5 rounded-full text-xs">{items.length}</span>
+                        </h3>
+                        <div className="grid gap-3">
+                          {items.map(acc => (
+                            <Card key={acc.id} className="border-l-4 border-l-primary">
+                              <CardContent className="p-4 flex gap-4 items-start">
+                                <CheckCircle2 className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                                <div>
+                                  <p className="font-medium text-sm leading-snug">
+                                    {acc.accommodationName || acc.description}
+                                  </p>
+                                  {acc.accommodationName && acc.description && acc.description !== acc.accommodationName && (
+                                    <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{acc.description}</p>
+                                  )}
+                                  {acc.notes && <p className="text-xs text-muted-foreground mt-2 italic border-l-2 pl-2">Note: {acc.notes}</p>}
+                                  <p className="text-[10px] text-muted-foreground mt-3 uppercase tracking-wider">Source Doc ID: {acc.documentId}</p>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
+            {/* Sidebar: linked documents */}
             <div className="space-y-6">
               <h2 className="text-xl font-semibold border-b pb-2">Linked Documents</h2>
               {student.documents.length === 0 ? (
