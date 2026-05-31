@@ -1,6 +1,6 @@
 import { Layout } from "@/components/layout";
 import { sectionLabel, sectionBorderClass } from "@/lib/section-utils";
-import { useGetStudent, getGetStudentQueryKey, useDeleteStudent, getListStudentsQueryKey, getGetStatsQueryKey, getListDocumentsQueryKey, getGetRecentActivityQueryKey } from "@workspace/api-client-react";
+import { useGetStudent, getGetStudentQueryKey, useDeleteStudent, useUpdateAccommodation, getListStudentsQueryKey, getGetStatsQueryKey, getListDocumentsQueryKey, getGetRecentActivityQueryKey } from "@workspace/api-client-react";
 import { useParams, Link, useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,8 +18,42 @@ export default function StudentDetail() {
 
   const { data: student, isLoading } = useGetStudent(studentId, { query: { enabled: !!studentId, queryKey: getGetStudentQueryKey(studentId) } });
   const deleteStudent = useDeleteStudent();
+  const updateAcc = useUpdateAccommodation();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  const invalidateStudent = () => {
+    queryClient.invalidateQueries({ queryKey: getGetStudentQueryKey(studentId) });
+    queryClient.invalidateQueries({ queryKey: getGetStatsQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getGetRecentActivityQueryKey() });
+  };
+
+  const handleReview = (id: number, isApproved: boolean) => {
+    updateAcc.mutate({ id, data: { isReviewed: true, isApproved } }, {
+      onSuccess: invalidateStudent,
+      onError: () => toast({ title: "Action failed. Please try again.", variant: "destructive" }),
+    });
+  };
+
+  const handleBulkReview = async (isApproved: boolean) => {
+    const pending = student?.accommodations.filter(a => !a.isReviewed) ?? [];
+    if (pending.length === 0) return;
+    const msg = isApproved
+      ? "Approve all pending accommodations for this student?"
+      : "Reject all pending accommodations for this student?";
+    if (!confirm(msg)) return;
+    try {
+      await Promise.all(
+        pending.map(acc =>
+          updateAcc.mutateAsync({ id: acc.id, data: { isReviewed: true, isApproved } })
+        )
+      );
+      invalidateStudent();
+      toast({ title: isApproved ? "All accommodations approved." : "All accommodations rejected." });
+    } catch {
+      toast({ title: "Some actions failed. Please try again.", variant: "destructive" });
+    }
+  };
 
   const handleDelete = () => {
     if (!student) return;
@@ -127,32 +161,41 @@ export default function StudentDetail() {
               {/* Pending Review section */}
               {pendingAccommodations.length > 0 && (
                 <div className="space-y-4">
-                  <div className="flex items-center gap-3 border-b pb-2">
+                  <div className="flex items-center gap-3 border-b pb-2 flex-wrap">
                     <h2 className="text-xl font-semibold">Pending Accommodation Review</h2>
                     <Badge variant="secondary" className="bg-amber-100 text-amber-800 hover:bg-amber-100 border-amber-200">
                       {pendingAccommodations.length}
                     </Badge>
+                    <div className="ml-auto flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 text-xs border-emerald-300 text-emerald-700 hover:bg-emerald-50 hover:border-emerald-400"
+                        onClick={() => handleBulkReview(true)}
+                        disabled={updateAcc.isPending}
+                      >
+                        Approve All
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 text-xs border-destructive/30 text-destructive hover:bg-destructive/10 hover:border-destructive"
+                        onClick={() => handleBulkReview(false)}
+                        disabled={updateAcc.isPending}
+                      >
+                        Reject All
+                      </Button>
+                    </div>
                   </div>
-                  <p className="text-sm text-muted-foreground -mt-2">
-                    Review these accommodations in the linked source document before they become active for staff.
-                  </p>
                   <div className="grid gap-3">
                     {pendingAccommodations.map(acc => (
                       <Card key={acc.id} className={`border-l-4 ${sectionBorderClass(acc.sourceSection)}`}>
-                        <CardContent className="p-4 space-y-2.5">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex gap-2.5 items-start min-w-0">
-                              <Clock className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                              <p className="font-medium text-sm leading-snug">
-                                {acc.accommodationName || acc.description || acc.category}
-                              </p>
-                            </div>
-                            <Link href={`/documents/${acc.documentId}`}>
-                              <Button variant="outline" size="sm" className="shrink-0 text-xs h-7 px-2.5 gap-1.5">
-                                <ExternalLink className="w-3 h-3" />
-                                Review in Source Document
-                              </Button>
-                            </Link>
+                        <CardContent className="p-4 space-y-3">
+                          <div className="flex gap-2.5 items-start min-w-0">
+                            <Clock className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                            <p className="font-medium text-sm leading-snug">
+                              {acc.accommodationName || acc.description || acc.category}
+                            </p>
                           </div>
 
                           {acc.accommodationName && acc.description && acc.description !== acc.accommodationName && (
@@ -178,6 +221,32 @@ export default function StudentDetail() {
                                 {acc.location}
                               </span>
                             )}
+                          </div>
+
+                          <div className="pl-6 pt-1 flex items-center gap-2 border-t border-border/50">
+                            <Button
+                              size="sm"
+                              className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white px-3"
+                              onClick={() => handleReview(acc.id, true)}
+                              disabled={updateAcc.isPending}
+                            >
+                              Approve
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 text-xs text-destructive border-destructive/30 hover:bg-destructive/10 hover:border-destructive px-3"
+                              onClick={() => handleReview(acc.id, false)}
+                              disabled={updateAcc.isPending}
+                            >
+                              Reject
+                            </Button>
+                            <Link href={`/documents/${acc.documentId}`} className="ml-auto">
+                              <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground hover:text-foreground gap-1.5 px-2">
+                                <ExternalLink className="w-3 h-3" />
+                                Review Source
+                              </Button>
+                            </Link>
                           </div>
                         </CardContent>
                       </Card>
