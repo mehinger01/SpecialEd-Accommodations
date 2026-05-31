@@ -357,12 +357,40 @@ function findSection(
 //      - IEP boilerplate → stripped via stripBoilerplate().
 //   6. Deduplicate by normalized accommodation name.
 
-// Matches location phrases that may appear fused or standalone in titles/descriptions.
-// Used to strip location text from assembled strings after extraction.
-const LOCATION_STRIP_RE = /\b(general\s+and\s+special\s+education|special\s+education(?:\s+(?:only|setting))?|general\s+education(?:\s+(?:only|setting))?|co[- ]?taught(?:\s+classroom)?|resource\s+room|self[- ]contained)\b/gi;
+// Only strips the compound phrase "General and Special Education" as a standalone location.
+// Does NOT strip sub-phrases like "Special education setting" that are part of accommodation names.
+const LOCATION_STRIP_RE = /\bgeneral\s+and\s+special\s+education\b/gi;
 
 function stripLocationFromText(text: string): string {
   return text.replace(LOCATION_STRIP_RE, "").replace(/\s{2,}/g, " ").trim();
+}
+
+// Pre-process cleaned lines to merge consecutive location-fragment lines into a
+// single "General and Special Education" line.  PDF text extraction sometimes
+// splits one field value across 2–4 lines; e.g.:
+//   ["General", "and", "Special", "Education"]
+//   ["General and Special", "Education"]
+// This pass reassembles those fragments before date-anchor or title scanning runs,
+// so LOCATION_VALUE_RE can match the normalised single line.
+function normalizeLocationFragments(lines: string[]): string[] {
+  const result = [...lines];
+  const NORMALIZED = "General and Special Education";
+  for (let i = 0; i < result.length; i++) {
+    for (let w = 2; w <= 4; w++) {
+      if (i + w > result.length) break;
+      const joined = result
+        .slice(i, i + w)
+        .map(l => l.trim())
+        .filter(Boolean)
+        .join(" ");
+      if (/^general\s+and\s+special\s+education\s*$/i.test(joined)) {
+        result[i] = NORMALIZED;
+        for (let j = 1; j < w; j++) result[i + j] = "";
+        break;
+      }
+    }
+  }
+  return result;
 }
 
 interface TitleRange {
@@ -411,7 +439,7 @@ function parseDateAnchoredBlocks(
   rawLines: string[],
   sourceSection: string
 ): ParsedAccommodation[] {
-  const cleaned = rawLines.map(cleanLine);
+  const cleaned = normalizeLocationFragments(rawLines.map(cleanLine));
   const results: ParsedAccommodation[] = [];
   const seen = new Set<string>();
 

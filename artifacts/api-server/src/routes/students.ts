@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, studentsTable, documentsTable, accommodationsTable, activityLogTable } from "@workspace/db";
-import { eq, ilike, or, count, sql, inArray } from "drizzle-orm";
+import { eq, ilike, or, count, inArray } from "drizzle-orm";
 
 const router = Router();
 
@@ -8,6 +8,9 @@ router.get("/students", async (req, res) => {
   try {
     const search = req.query.search as string | undefined;
 
+    // Correlated subqueries in Drizzle sql`` templates emit parameterised placeholders
+    // rather than column references, so they always return the same row's value.
+    // Use separate group-by aggregation queries instead and merge in application code.
     const base = db
       .select({
         id: studentsTable.id,
@@ -16,26 +19,33 @@ router.get("/students", async (req, res) => {
         caseManager: studentsTable.caseManager,
         planType: studentsTable.planType,
         createdAt: studentsTable.createdAt,
-        accommodationCount: sql<number>`(select count(*) from accommodations a where a.student_id = ${studentsTable.id})`.as("accommodation_count"),
-        documentCount: sql<number>`(select count(*) from documents d where d.student_id = ${studentsTable.id})`.as("document_count"),
       })
       .from(studentsTable);
 
-    const rows = search
-      ? await base.where(
-          or(
+    const [students, accomCounts, docCounts] = await Promise.all([
+      search
+        ? base.where(or(
             ilike(studentsTable.displayName, `%${search}%`),
             ilike(studentsTable.caseManager, `%${search}%`),
             ilike(studentsTable.gradeLevel, `%${search}%`)
-          )
-        )
-      : await base;
+          ))
+        : base,
+      db.select({ studentId: accommodationsTable.studentId, cnt: count(accommodationsTable.id) })
+        .from(accommodationsTable)
+        .groupBy(accommodationsTable.studentId),
+      db.select({ studentId: documentsTable.studentId, cnt: count(documentsTable.id) })
+        .from(documentsTable)
+        .groupBy(documentsTable.studentId),
+    ]);
+
+    const accomMap = new Map(accomCounts.map(r => [r.studentId, Number(r.cnt)]));
+    const docMap   = new Map(docCounts.map(r => [r.studentId, Number(r.cnt)]));
 
     res.json(
-      rows.map((r) => ({
-        ...r,
-        accommodationCount: Number(r.accommodationCount),
-        documentCount: Number(r.documentCount),
+      students.map(s => ({
+        ...s,
+        accommodationCount: accomMap.get(s.id) ?? 0,
+        documentCount:      docMap.get(s.id) ?? 0,
       }))
     );
   } catch (err) {
@@ -92,8 +102,6 @@ router.get("/students/:id", async (req, res) => {
         caseManager: studentsTable.caseManager,
         planType: studentsTable.planType,
         createdAt: studentsTable.createdAt,
-        accommodationCount: sql<number>`(select count(*) from accommodations a where a.student_id = ${studentsTable.id})`.as("accommodation_count"),
-        documentCount: sql<number>`(select count(*) from documents d where d.student_id = ${studentsTable.id})`.as("document_count"),
       })
       .from(studentsTable)
       .where(eq(studentsTable.id, id));
@@ -114,8 +122,8 @@ router.get("/students/:id", async (req, res) => {
 
     res.json({
       ...student,
-      accommodationCount: Number(student.accommodationCount),
-      documentCount: Number(student.documentCount),
+      accommodationCount: accommodations.length,
+      documentCount: documents.length,
       accommodations: accommodations.map((a) => ({
         ...a,
         isApproved: a.isApproved ?? null,

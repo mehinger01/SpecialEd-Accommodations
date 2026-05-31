@@ -4,7 +4,7 @@ import { useParams, Link, useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ChevronLeft, FileText, CheckCircle2, User, GraduationCap, Briefcase, Trash2, Clock } from "lucide-react";
+import { ChevronLeft, FileText, CheckCircle2, User, GraduationCap, Briefcase, Trash2, Clock, CalendarRange, MapPin, ExternalLink } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { useQueryClient } from "@tanstack/react-query";
@@ -133,29 +133,50 @@ export default function StudentDetail() {
                     </Badge>
                   </div>
                   <p className="text-sm text-muted-foreground -mt-2">
-                    These accommodations were extracted but not yet reviewed.{" "}
-                    <Link href={`/documents/${pendingAccommodations[0]?.documentId}`} className="text-primary hover:underline">
-                      Open the document →
-                    </Link>
+                    Review these accommodations in the linked source document before they become active for staff.
                   </p>
                   <div className="grid gap-3">
                     {pendingAccommodations.map(acc => (
                       <Card key={acc.id} className="border-l-4 border-l-amber-400">
-                        <CardContent className="p-4 flex gap-3 items-start">
-                          <Clock className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                          <div className="min-w-0">
-                            <p className="font-medium text-sm leading-snug">
-                              {acc.accommodationName || acc.description || acc.category}
-                            </p>
-                            {acc.accommodationName && acc.description && acc.description !== acc.accommodationName && (
-                              <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{acc.description}</p>
-                            )}
-                            <div className="flex items-center gap-2 mt-2">
+                        <CardContent className="p-4 space-y-2.5">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex gap-2.5 items-start min-w-0">
+                              <Clock className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                              <p className="font-medium text-sm leading-snug">
+                                {acc.accommodationName || acc.description || acc.category}
+                              </p>
+                            </div>
+                            <Link href={`/documents/${acc.documentId}`}>
+                              <Button variant="outline" size="sm" className="shrink-0 text-xs h-7 px-2.5 gap-1.5">
+                                <ExternalLink className="w-3 h-3" />
+                                Review in Source Document
+                              </Button>
+                            </Link>
+                          </div>
+
+                          {acc.accommodationName && acc.description && acc.description !== acc.accommodationName && (
+                            <p className="text-xs text-muted-foreground leading-relaxed pl-6">{acc.description}</p>
+                          )}
+
+                          <div className="pl-6 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
+                            <div className="flex items-center gap-1.5">
                               <Badge variant="outline" className="text-[10px]">{acc.category}</Badge>
                               {acc.sourceSection && (
-                                <span className="text-[10px] text-muted-foreground">{acc.sourceSection}</span>
+                                <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded">{acc.sourceSection}</span>
                               )}
                             </div>
+                            {(acc.startDate || acc.endDate) && (
+                              <span className="flex items-center gap-1">
+                                <CalendarRange className="w-3 h-3" />
+                                {acc.startDate ?? "?"} – {acc.endDate ?? <span className="text-amber-600">end missing</span>}
+                              </span>
+                            )}
+                            {acc.location && (
+                              <span className="flex items-center gap-1">
+                                <MapPin className="w-3 h-3" />
+                                {acc.location}
+                              </span>
+                            )}
                           </div>
                         </CardContent>
                       </Card>
