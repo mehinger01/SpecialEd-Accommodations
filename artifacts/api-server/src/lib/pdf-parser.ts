@@ -92,7 +92,6 @@ const IGNORE_HEADERS: RegExp[] = [
   /^state determined assessment/i,
   /^state alternate assessment/i,
   /^assessment area/i,
-  /^universal tools?/i,
   /^for students not taking/i,
   /^indicate why it is not appropriate/i,
   /^why the alternate assessment/i,
@@ -114,6 +113,26 @@ const START_DATE_RE = /start\s*date\s*:?\s*(\d{1,2}\/\d{1,2}\/\d{4})/i;
 const END_DATE_RE   = /end\s*date\s*:?\s*(\d{1,2}\/\d{1,2}\/\d{4})/i;
 const ANY_DATE_RE   = /\b\d{1,2}\/\d{1,2}\/\d{4}\b/;
 const LOCATION_RE   = /^location\s*:\s*(.+)/i;
+
+// Fix 4: PDF header/footer lines that contaminate accommodation blocks.
+// These are filtered from the full text before section detection.
+const FOOTER_LINE_RE = /\b(?:DOB|UIC)\s*:|IEP\s+Date\s*:|Operating\s+District\s*:|\bPage\s+\d+|\bPage\s*$/i;
+
+// Fix 3: Recognise known location values that appear without a "Location:" label.
+// When one of these lines is found in the description range, it becomes location
+// and is removed from the description.
+const LOCATION_VALUE_RE = /^(general\s+and\s+special\s+education|special\s+education(?:\s+only|\s+setting)?|general\s+education(?:\s+only|\s+setting)?|co[- ]?taught(?:\s+classroom)?|resource\s+room|self[- ]contained)\s*$/i;
+
+// Fix 2: IEP boilerplate sentences that appear after every accommodation in
+// Skyward IEPs. These fragments must be stripped from descriptions before storing.
+const BOILERPLATE_STRIPS: RegExp[] = [
+  /the iep team must consider if this accommodation is required to participate in extracurricular and nonacademic activities\.?/gi,
+  /accommodation is required to participate in extracurricular and nonacademic activities\.?/gi,
+  /required to participate in extracurricular and nonacademic activities\.?/gi,
+  /participate in extracurricular and nonacademic activities\.?/gi,
+  /extracurricular and nonacademic activities\.?/gi,
+  /in extracurricular and nonacademic activities\.?/gi,
+];
 
 // ─── Category classifier ──────────────────────────────────────────────────────
 
@@ -281,6 +300,15 @@ function normKey(name: string): string {
     .trim();
 }
 
+// Fix 2: strip recurring IEP boilerplate from a description string.
+function stripBoilerplate(text: string): string {
+  let result = text;
+  for (const p of BOILERPLATE_STRIPS) {
+    result = result.replace(p, "");
+  }
+  return result.replace(/\s{2,}/g, " ").trim();
+}
+
 // ─── Section slicer ───────────────────────────────────────────────────────────
 
 function findSection(
@@ -311,16 +339,54 @@ function findSection(
 //
 // Algorithm:
 //   1. Locate every "Start Date: MM/DD/YYYY" line in the section.
-//   2. For each, look BACK (up to 10 lines) for the accommodation title —
-//      the last non-ignore, non-date, non-location, non-empty line.
-//   3. Pre-compute ALL name indices up front so we know where each block's
-//      title sits — this lets us use nameIdx[d+1] as the upper bound for
-//      description collection, preventing the title of block N+1 from bleeding
-//      into the description of block N.
-//   4. Find the matching End Date within the next 6 lines.
-//   5. Collect description text from after End Date up to (but not including)
-//      the title line of the next block.
+//   2. For each, look BACK (up to 15 lines) collecting ALL title lines —
+//      stop at a blank line, a category header, any date, or a location label.
+//      Join collected lines (forward order) into one normalized title string.
+//      "Universal Tools: Administration of the…" wraps across multiple lines
+//      and must be assembled this way.
+//   3. Pre-compute ALL title ranges up front (start index = earliest title line).
+//      Use titleRanges[d+1].start as the description upper bound, which stops
+//      description collection before the next block's title begins.
+//   4. Find End Date within next 6 lines.
+//   5. Collect description text from after End Date to next title start.
+//      - Explicit "Location: X" labels → location field.
+//      - Known bare location values (e.g. "General and Special Education") → location.
+//      - IEP boilerplate → stripped via stripBoilerplate().
 //   6. Deduplicate by normalized accommodation name.
+
+interface TitleRange {
+  start: number;  // earliest line index (furthest from Start Date)
+  end: number;    // latest line index (closest to Start Date)
+  name: string;   // full joined accommodation title
+}
+
+function computeTitleRange(cleaned: string[], sdIdx: number): TitleRange | null {
+  const lines: string[] = [];
+  let start = -1;
+  let end = -1;
+
+  for (let i = sdIdx - 1; i >= Math.max(0, sdIdx - 15); i--) {
+    const line = cleaned[i];
+    // Blank line → hard boundary; stop immediately.
+    if (!line || line.length < 2) break;
+    // Category / section header → boundary; stop (don't include this line).
+    if (isIgnoreHeader(line)) break;
+    // Date from a previous block → boundary.
+    if (isDateLine(line) || ANY_DATE_RE.test(line)) break;
+    // Bare "Location:" label → skip but don't stop.
+    if (LOCATION_RE.test(line)) continue;
+    // Known bare location value → skip but don't stop.
+    if (LOCATION_VALUE_RE.test(line)) continue;
+
+    // Valid title line.
+    lines.unshift(line); // prepend → forward order
+    start = i;           // keeps updating to the earliest valid line
+    if (end === -1) end = i; // set once: first found going backward = closest to Start Date
+  }
+
+  if (lines.length === 0) return null;
+  return { start, end, name: lines.join(" ").replace(/\s+/g, " ").trim() };
+}
 
 function parseDateAnchoredBlocks(
   rawLines: string[],
@@ -330,40 +396,32 @@ function parseDateAnchoredBlocks(
   const results: ParsedAccommodation[] = [];
   const seen = new Set<string>();
 
-  // Step 1: collect all Start Date line indices
+  // Step 1: collect all Start Date line indices.
   const startDateIdxs: number[] = [];
   for (let i = 0; i < cleaned.length; i++) {
     if (START_DATE_RE.test(cleaned[i])) startDateIdxs.push(i);
   }
-
   if (startDateIdxs.length === 0) return [];
 
-  // Step 2: pre-compute name index for every Start Date block.
-  // This is crucial: we need nameIdxs[d+1] to know where NOT to include
-  // text when collecting descriptions for block d.
-  const nameIdxs: number[] = startDateIdxs.map((sdIdx) => {
-    for (let i = sdIdx - 1; i >= Math.max(0, sdIdx - 12); i--) {
-      const line = cleaned[i];
-      if (!line || line.length < 3) continue;
-      if (isIgnoreHeader(line)) continue;
-      if (isDateLine(line) || ANY_DATE_RE.test(line)) continue;
-      if (LOCATION_RE.test(line)) continue;
-      return i;
-    }
-    return -1;
-  });
+  // Step 2: pre-compute full title range for every Start Date block.
+  // titleRanges[d].start is the earliest line of block d's title — used as
+  // the upper bound when collecting descriptions for block d-1.
+  const titleRanges: Array<TitleRange | null> = startDateIdxs.map((sdIdx) =>
+    computeTitleRange(cleaned, sdIdx)
+  );
 
   for (let d = 0; d < startDateIdxs.length; d++) {
-    const sdIdx   = startDateIdxs[d];
-    const nameIdx = nameIdxs[d];
-    if (nameIdx === -1) continue;
+    const sdIdx = startDateIdxs[d];
+    const range = titleRanges[d];
+    if (!range) continue;
 
-    const accommodationName = cleaned[nameIdx];
+    const accommodationName = range.name;
 
-    // Description upper bound: stop at the title line of the NEXT block,
-    // not at its Start Date. This prevents the next block's name from
-    // appearing in the current block's description.
-    const nextNameIdx = d + 1 < nameIdxs.length ? nameIdxs[d + 1] : cleaned.length;
+    // Description upper bound: stop at the EARLIEST line of the next block's title.
+    const nextTitleStart =
+      d + 1 < titleRanges.length && titleRanges[d + 1] !== null
+        ? (titleRanges[d + 1] as TitleRange).start
+        : cleaned.length;
 
     // ── Dates ────────────────────────────────────────────────────────────────
     let startDate: string | null = null;
@@ -374,49 +432,56 @@ function parseDateAnchoredBlocks(
     const sdMatch = START_DATE_RE.exec(sdLine);
     if (sdMatch) startDate = sdMatch[1];
 
-    // Check if End Date is on the same line as Start Date
     const sameLineEnd = END_DATE_RE.exec(sdLine);
     if (sameLineEnd) {
       endDate = sameLineEnd[1];
-      edIdx = sdIdx;
     } else {
       for (let i = sdIdx + 1; i < Math.min(sdIdx + 7, cleaned.length); i++) {
         const em = END_DATE_RE.exec(cleaned[i]);
-        if (em) {
-          endDate = em[1];
-          edIdx = i;
-          break;
-        }
+        if (em) { endDate = em[1]; edIdx = i; break; }
       }
     }
 
-    // ── Description lines & location ────────────────────────────────────────
-    // Collect from after End Date up to (but not including) the next name line.
+    // ── Description + location ────────────────────────────────────────────────
+    // Collect from after End Date up to (not including) next block's title start.
+    // Fix 3: check location patterns BEFORE the ignore-header filter so that
+    //        "General and Special Education" is captured as location, not silently dropped.
+    // Fix 2: stripBoilerplate() removes IEP compliance boilerplate from the joined text.
     const descParts: string[] = [];
     let location: string | null = null;
 
-    for (let i = edIdx + 1; i < nextNameIdx; i++) {
+    for (let i = edIdx + 1; i < nextTitleStart; i++) {
       const line = cleaned[i];
       if (!line || line.length < 4) continue;
-      if (isIgnoreHeader(line)) continue;
       if (isDateLine(line) || ANY_DATE_RE.test(line)) continue;
 
-      const locMatch = LOCATION_RE.exec(line);
-      if (locMatch) {
-        if (!location) location = cleanLine(locMatch[1]);
+      // Explicit "Location: X" label → capture value.
+      const locLabelMatch = LOCATION_RE.exec(line);
+      if (locLabelMatch) {
+        if (!location) location = cleanLine(locLabelMatch[1]);
         continue;
       }
+
+      // Bare location value (Fix 3) → capture before the ignore-header check.
+      if (LOCATION_VALUE_RE.test(line)) {
+        if (!location) location = line;
+        continue;
+      }
+
+      if (isIgnoreHeader(line)) continue;
 
       descParts.push(line);
     }
 
-    const description = descParts.join(" ").trim();
+    // Fix 2: strip boilerplate from joined description.
+    const description = stripBoilerplate(descParts.join(" ").trim());
+
     const key = normKey(accommodationName);
     if (seen.has(key)) continue;
     seen.add(key);
 
     const rawSnippet = rawLines
-      .slice(nameIdx, Math.min(nameIdx + 20, nextNameIdx))
+      .slice(range.start, Math.min(range.start + 20, nextTitleStart))
       .join("\n")
       .slice(0, 600);
 
@@ -487,7 +552,11 @@ function extractAccommodations(rawText: string): {
   accommodations: ParsedAccommodation[];
   warnings: string[];
 } {
-  const lines = rawText.split(/\r?\n/);
+  // Fix 4: strip PDF header/footer lines (DOB:, UIC:, IEP Date:, Operating District:, Page N)
+  // before section detection so they never contaminate accommodation blocks.
+  const lines = rawText
+    .split(/\r?\n/)
+    .filter((l) => !FOOTER_LINE_RE.test(cleanLine(l)));
   const warnings: string[] = [];
 
   // Section 5

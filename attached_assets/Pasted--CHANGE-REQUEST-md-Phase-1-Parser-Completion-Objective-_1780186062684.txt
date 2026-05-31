@@ -1,0 +1,270 @@
+# CHANGE_REQUEST.md
+
+# Phase 1 Parser Completion
+
+## Objective
+
+The parser is now functioning correctly at a high level. It successfully identifies Section 5 accommodations, limits Section 6 extraction, and no longer produces excessive false positives.
+
+This change request is focused exclusively on parser cleanup and production-quality extraction.
+
+Do not modify:
+
+* UI layout
+* Upload workflow
+* Student creation workflow
+* Dashboard components
+* Database schema
+* Approval/rejection workflow
+* Section 6 whitelist architecture
+
+Only implement the parser improvements below.
+
+---
+
+# Current Status
+
+The parser currently extracts:
+
+## Section 5
+
+* supervision - Special education setting (NE)
+* Alternative testing location
+* Reduced writing
+* Breaks
+* Behavior Intervention Plan
+
+## Section 6
+
+* Breaks
+* Alternative testing location
+* Reduced writing
+
+This is substantially correct.
+
+The remaining work is to improve extraction quality.
+
+---
+
+# Fix 1: Full Universal Tools Title Extraction
+
+## Current Incorrect Output
+
+```text
+supervision - Special education setting (NE)
+```
+
+## Required Output
+
+```text
+Universal Tools: Administration of the assessment in an alternate education setting (in school) with appropriate supervision - Special education setting (NE)
+```
+
+## Root Cause
+
+The accommodation title wraps across multiple lines before the Start Date field.
+
+The parser is currently capturing only the final line before Start Date.
+
+## Required Behavior
+
+For each accommodation block:
+
+1. Locate Start Date.
+2. Collect all title lines immediately preceding Start Date.
+3. Stop when reaching:
+
+   * a category header
+   * Time/Frequency/Condition
+   * Location
+   * a section header
+   * the previous accommodation block
+4. Join title lines into a single normalized string.
+5. Collapse duplicate whitespace.
+
+The full Universal Tools title must be preserved.
+
+---
+
+# Fix 2: Remove IEP Boilerplate Language
+
+## Current Problem
+
+Descriptions contain repeated compliance language.
+
+Example:
+
+```text
+The IEP Team must consider if this accommodation is required to participate in extracurricular and nonacademic activities.
+```
+
+This language appears repeatedly and provides no value to teachers.
+
+## Required Behavior
+
+Remove all occurrences of:
+
+```text
+The IEP Team must consider if this accommodation is required to participate in extracurricular and nonacademic activities.
+```
+
+Also remove partial fragments caused by line wrapping.
+
+Examples:
+
+```text
+accommodation is required to participate in extracurricular and nonacademic activities
+```
+
+```text
+required to participate in extracurricular and nonacademic activities
+```
+
+```text
+participate in extracurricular and nonacademic activities
+```
+
+These should not appear in descriptions.
+
+---
+
+# Fix 3: Extract Location
+
+## Current Problem
+
+Location text is embedded inside descriptions.
+
+Examples:
+
+```text
+General and Special Education
+```
+
+or
+
+```text
+General
+and
+Special
+Education
+```
+
+## Required Behavior
+
+Normalize and extract into:
+
+```json
+{
+  "location": "General and Special Education"
+}
+```
+
+Remove the location text from the description after extraction.
+
+Do not leave location null when this text exists.
+
+---
+
+# Fix 4: Remove Footer/Header Contamination
+
+## Current Problem
+
+Some accommodation blocks contain footer text from the PDF.
+
+Examples include:
+
+```text
+DOB:
+```
+
+```text
+UIC:
+```
+
+```text
+IEP Date:
+```
+
+```text
+Operating District:
+```
+
+```text
+Page
+```
+
+These lines should never be part of accommodation extraction.
+
+## Required Behavior
+
+Before parsing:
+
+Remove any line containing:
+
+* DOB:
+* UIC:
+* IEP Date:
+* Operating District:
+* Page
+
+This filtering should occur before accommodation block construction.
+
+---
+
+# Fix 5: Preserve Current Section 6 Behavior
+
+Do not broaden Section 6 matching.
+
+Continue using strict whitelist matching.
+
+Section 6 accommodations do not require:
+
+* Start Date
+* End Date
+
+Do not generate warnings for missing dates in Section 6.
+
+Keep current whitelist architecture intact.
+
+---
+
+# Expected Output After Fix
+
+## Section 5
+
+1. Universal Tools: Administration of the assessment in an alternate education setting (in school) with appropriate supervision - Special education setting (NE)
+
+2. Alternative testing location
+
+3. Reduced writing
+
+4. Breaks
+
+5. Behavior Intervention Plan
+
+## Section 6
+
+1. Breaks
+
+2. Alternative testing location
+
+3. Reduced writing
+
+4. Universal Tools: Administration of the assessment in an alternate education setting (in school) with appropriate supervision - Special education setting (NE) (if detected from the assessment accommodations table)
+
+---
+
+# Definition of Done
+
+This change is complete only when:
+
+1. Universal Tools is extracted as a complete title.
+2. No Section 5 description contains the repeated IEP Team boilerplate language.
+3. No Section 5 description contains fragments of that boilerplate language.
+4. Location is extracted into the location field.
+5. Location is removed from the description field.
+6. Footer/header information is removed before parsing.
+7. Section 6 remains whitelist-based.
+8. Section 6 does not generate missing date warnings.
+9. Total accommodation count remains approximately 8–9 records for the sample document.
+10. No regressions are introduced into existing extraction behavior.
