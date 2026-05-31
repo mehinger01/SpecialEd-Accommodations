@@ -1,4 +1,5 @@
 import { Layout } from "@/components/layout";
+import { sectionLabel, sectionBorderClass } from "@/lib/section-utils";
 import { useGetDocument, getGetDocumentQueryKey, useUpdateAccommodation, useDeleteAccommodation } from "@workspace/api-client-react";
 import { useParams } from "wouter";
 import { Link } from "wouter";
@@ -179,7 +180,7 @@ export default function DocumentDetail() {
               {orderedSections.map((section) => (
                 <div key={section} className="space-y-4">
                   <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-base text-foreground">{section}</h3>
+                    <h3 className="font-semibold text-base text-foreground">{sectionLabel(section)}</h3>
                     <Badge variant="secondary" className="text-xs">{bySection[section].length}</Badge>
                   </div>
 
@@ -191,13 +192,7 @@ export default function DocumentDetail() {
                       return (
                         <Card
                           key={acc.id}
-                          className={
-                            acc.isReviewed
-                              ? acc.isApproved
-                                ? "border-l-4 border-l-primary"
-                                : "border-l-4 border-l-destructive/50 opacity-60"
-                              : "border-l-4 border-l-amber-400"
-                          }
+                          className={`border-l-4 ${sectionBorderClass(acc.sourceSection)}${acc.isReviewed && !acc.isApproved ? " opacity-60" : ""}`}
                         >
                           <CardContent className="p-4 flex gap-4">
                             <div className="flex-1 min-w-0 space-y-2">

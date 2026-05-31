@@ -1,4 +1,5 @@
 import { Layout } from "@/components/layout";
+import { sectionLabel, sectionBorderClass } from "@/lib/section-utils";
 import { useListAccommodations, getListAccommodationsQueryKey, useUpdateAccommodation } from "@workspace/api-client-react";
 import { useState } from "react";
 import { Link } from "wouter";
@@ -104,9 +105,12 @@ export default function Accommodations() {
                   </TableRow>
                 ) : (
                   filtered?.map((acc) => (
-                    <TableRow key={acc.id}>
+                    <TableRow key={acc.id} className={`border-l-4 ${sectionBorderClass(acc.sourceSection)}`}>
                       <TableCell className="font-medium text-sm">
-                        {acc.description}
+                        <p>{acc.description}</p>
+                        {acc.sourceSection && (
+                          <span className="text-[10px] text-muted-foreground mt-0.5 block">{sectionLabel(acc.sourceSection)}</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline" className="font-normal text-xs uppercase tracking-wider">

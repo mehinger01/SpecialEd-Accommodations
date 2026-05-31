@@ -1,4 +1,5 @@
 import { Layout } from "@/components/layout";
+import { sectionLabel, sectionBorderClass } from "@/lib/section-utils";
 import { useGetStudent, getGetStudentQueryKey, useDeleteStudent, getListStudentsQueryKey, getGetStatsQueryKey, getListDocumentsQueryKey, getGetRecentActivityQueryKey } from "@workspace/api-client-react";
 import { useParams, Link, useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
@@ -137,7 +138,7 @@ export default function StudentDetail() {
                   </p>
                   <div className="grid gap-3">
                     {pendingAccommodations.map(acc => (
-                      <Card key={acc.id} className="border-l-4 border-l-amber-400">
+                      <Card key={acc.id} className={`border-l-4 ${sectionBorderClass(acc.sourceSection)}`}>
                         <CardContent className="p-4 space-y-2.5">
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex gap-2.5 items-start min-w-0">
@@ -162,7 +163,7 @@ export default function StudentDetail() {
                             <div className="flex items-center gap-1.5">
                               <Badge variant="outline" className="text-[10px]">{acc.category}</Badge>
                               {acc.sourceSection && (
-                                <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded">{acc.sourceSection}</span>
+                                <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded">{sectionLabel(acc.sourceSection)}</span>
                               )}
                             </div>
                             {(acc.startDate || acc.endDate) && (
@@ -210,7 +211,7 @@ export default function StudentDetail() {
                         </h3>
                         <div className="grid gap-3">
                           {items.map(acc => (
-                            <Card key={acc.id} className="border-l-4 border-l-primary">
+                            <Card key={acc.id} className={`border-l-4 ${sectionBorderClass(acc.sourceSection)}`}>
                               <CardContent className="p-4 flex gap-4 items-start">
                                 <CheckCircle2 className="w-5 h-5 text-primary shrink-0 mt-0.5" />
                                 <div>

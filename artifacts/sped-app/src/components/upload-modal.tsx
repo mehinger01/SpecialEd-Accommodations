@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { sectionLabel } from "@/lib/section-utils";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   getListDocumentsQueryKey,
@@ -354,7 +355,7 @@ export function UploadModal({ open, onOpenChange }: UploadModalProps) {
                         </p>
                         <div className="flex items-center gap-1 shrink-0">
                           {a.sourceSection && (
-                            <Badge variant="outline" className="text-[10px] font-medium">{a.sourceSection}</Badge>
+                            <Badge variant="outline" className="text-[10px] font-medium">{sectionLabel(a.sourceSection)}</Badge>
                           )}
                           <Badge variant="secondary" className="text-[10px]">Pending Review</Badge>
                         </div>
