@@ -1,11 +1,11 @@
 import { Layout } from "@/components/layout";
-import { useGetDocument, getGetDocumentQueryKey, useUpdateAccommodation } from "@workspace/api-client-react";
+import { useGetDocument, getGetDocumentQueryKey, useUpdateAccommodation, useDeleteAccommodation } from "@workspace/api-client-react";
 import { useParams } from "wouter";
 import { Link } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { ChevronLeft, CheckCircle2, XCircle, Clock, FileText, AlertTriangle, CalendarRange, MapPin } from "lucide-react";
+import { ChevronLeft, CheckCircle2, XCircle, Clock, FileText, AlertTriangle, CalendarRange, MapPin, Trash2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -17,6 +17,7 @@ export default function DocumentDetail() {
 
   const { data: doc, isLoading } = useGetDocument(docId, { query: { enabled: !!docId, queryKey: getGetDocumentQueryKey(docId) } });
   const updateAcc = useUpdateAccommodation();
+  const deleteAcc = useDeleteAccommodation();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -54,7 +55,19 @@ export default function DocumentDetail() {
     });
   };
 
-  // Group by sourceSection, then by category within section
+  const handleDelete = (accId: number) => {
+    if (!confirm("Remove this accommodation record?")) return;
+    deleteAcc.mutate({ id: accId }, {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getGetDocumentQueryKey(docId) });
+        toast({ title: "Accommodation removed" });
+      },
+      onError: () => {
+        toast({ title: "Delete failed", variant: "destructive" });
+      },
+    });
+  };
+
   const bySection = doc.accommodations.reduce((acc, curr) => {
     const section = curr.sourceSection || "Unsectioned";
     if (!acc[section]) acc[section] = [];
@@ -188,13 +201,11 @@ export default function DocumentDetail() {
                         >
                           <CardContent className="p-4 flex gap-4">
                             <div className="flex-1 min-w-0 space-y-2">
-                              {/* Name + section badge */}
                               <div className="flex items-start gap-2 flex-wrap">
                                 <p className="font-semibold text-sm leading-tight">{displayName}</p>
                                 <Badge variant="outline" className="text-[10px] shrink-0">{acc.category}</Badge>
                               </div>
 
-                              {/* Dates */}
                               <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
                                 <span className="flex items-center gap-1">
                                   <CalendarRange className="w-3 h-3" />
@@ -211,7 +222,6 @@ export default function DocumentDetail() {
                                 )}
                               </div>
 
-                              {/* Description */}
                               {acc.description && acc.description !== displayName && (
                                 <p className="text-xs text-muted-foreground bg-muted/40 rounded px-2 py-1.5 leading-relaxed">
                                   {acc.description}
@@ -219,7 +229,7 @@ export default function DocumentDetail() {
                               )}
                             </div>
 
-                            {/* Review actions */}
+                            {/* Review + delete actions */}
                             <div className="flex flex-col gap-2 shrink-0 border-l pl-4 justify-center">
                               {acc.isReviewed ? (
                                 <div className="flex flex-col items-center text-xs gap-1">
@@ -258,6 +268,15 @@ export default function DocumentDetail() {
                                   </Button>
                                 </>
                               )}
+                              <Button
+                                size="sm" variant="ghost"
+                                className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 mt-1"
+                                onClick={() => handleDelete(acc.id)}
+                                disabled={deleteAcc.isPending}
+                                title="Delete this accommodation"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </Button>
                             </div>
                           </CardContent>
                         </Card>

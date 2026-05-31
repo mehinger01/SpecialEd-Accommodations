@@ -745,6 +745,76 @@ export function useGetStudent<TData = Awaited<ReturnType<typeof getStudent>>, TE
 
 
 
+export const getDeleteStudentUrl = (id: number,) => {
+
+
+
+
+  return `/api/students/${id}`
+}
+
+/**
+ * @summary Delete a student and unassign their documents
+ */
+export const deleteStudent = async (id: number, options?: RequestInit): Promise<Student> => {
+
+  return customFetch<Student>(getDeleteStudentUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteStudentMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteStudent>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteStudent>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteStudent'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteStudent>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteStudent(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteStudentMutationResult = NonNullable<Awaited<ReturnType<typeof deleteStudent>>>
+
+    export type DeleteStudentMutationError = ErrorType<ApiError>
+
+    /**
+ * @summary Delete a student and unassign their documents
+ */
+export const useDeleteStudent = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteStudent>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteStudent>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteStudentMutationOptions(options));
+    }
+
 export const getGetStudentAccommodationsUrl = (id: number,) => {
 
 

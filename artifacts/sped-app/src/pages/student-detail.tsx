@@ -1,18 +1,39 @@
 import { Layout } from "@/components/layout";
-import { useGetStudent, getGetStudentQueryKey } from "@workspace/api-client-react";
-import { useParams, Link } from "wouter";
+import { useGetStudent, getGetStudentQueryKey, useDeleteStudent, getListStudentsQueryKey } from "@workspace/api-client-react";
+import { useParams, Link, useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ChevronLeft, FileText, CheckCircle2, User, GraduationCap, Briefcase } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { ChevronLeft, FileText, CheckCircle2, User, GraduationCap, Briefcase, Trash2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
+import { useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 
 export default function StudentDetail() {
   const { id } = useParams<{ id: string }>();
   const studentId = parseInt(id || "0", 10);
-  
+  const [, navigate] = useLocation();
+
   const { data: student, isLoading } = useGetStudent(studentId, { query: { enabled: !!studentId, queryKey: getGetStudentQueryKey(studentId) } });
+  const deleteStudent = useDeleteStudent();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const handleDelete = () => {
+    if (!student) return;
+    if (!confirm(`Delete "${student.displayName}"? Their documents will be kept but unassigned.`)) return;
+    deleteStudent.mutate({ id: studentId }, {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getListStudentsQueryKey() });
+        toast({ title: "Student deleted" });
+        navigate("/students");
+      },
+      onError: () => {
+        toast({ title: "Delete failed", variant: "destructive" });
+      },
+    });
+  };
 
   if (isLoading) {
     return (
@@ -38,7 +59,7 @@ export default function StudentDetail() {
   }
 
   const accommodationsByCategory = student.accommodations.reduce((acc, curr) => {
-    if (!curr.isApproved) return acc; // Only show approved ones in the student view
+    if (!curr.isApproved) return acc;
     if (!acc[curr.category]) acc[curr.category] = [];
     acc[curr.category].push(curr);
     return acc;
@@ -53,7 +74,7 @@ export default function StudentDetail() {
           <Link href="/students" className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-foreground">
             <ChevronLeft className="w-4 h-4 mr-1" /> Back to Students
           </Link>
-          
+
           <div className="flex flex-col md:flex-row gap-6 md:items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="h-16 w-16 bg-primary/10 rounded-full flex items-center justify-center text-primary">
@@ -67,8 +88,8 @@ export default function StudentDetail() {
                 </div>
               </div>
             </div>
-            
-            <div className="flex flex-wrap gap-3">
+
+            <div className="flex flex-wrap items-center gap-3">
               <Badge variant="outline" className="text-base px-4 py-1.5 font-medium border-primary/20 bg-primary/5 text-primary">
                 {student.planType} Plan
               </Badge>
@@ -76,6 +97,16 @@ export default function StudentDetail() {
                 <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Active Accoms</span>
                 <span className="font-bold text-lg leading-none mt-1">{student.accommodations.filter(a => a.isApproved).length}</span>
               </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-destructive border-destructive/30 hover:bg-destructive/10 hover:border-destructive ml-2"
+                onClick={handleDelete}
+                disabled={deleteStudent.isPending}
+              >
+                <Trash2 className="w-4 h-4 mr-1.5" />
+                Delete Student
+              </Button>
             </div>
           </div>
 
@@ -89,7 +120,7 @@ export default function StudentDetail() {
                   </Badge>
                 )}
               </div>
-              
+
               {Object.keys(accommodationsByCategory).length === 0 ? (
                 <div className="bg-muted border p-8 rounded-lg text-center text-muted-foreground">
                   No active accommodations found. Upload and review a document to add accommodations.
@@ -102,7 +133,6 @@ export default function StudentDetail() {
                         {category}
                         <span className="bg-muted text-muted-foreground px-2 py-0.5 rounded-full text-xs">{items.length}</span>
                       </h3>
-                      
                       <div className="grid gap-3">
                         {items.map(acc => (
                           <Card key={acc.id} className="border-l-4 border-l-primary">
@@ -125,7 +155,6 @@ export default function StudentDetail() {
 
             <div className="space-y-6">
               <h2 className="text-xl font-semibold border-b pb-2">Linked Documents</h2>
-              
               {student.documents.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-4 bg-muted rounded-md border">No documents linked</p>
               ) : (
@@ -134,14 +163,14 @@ export default function StudentDetail() {
                     <Link key={doc.id} href={`/documents/${doc.id}`} className="block transition-transform hover:-translate-y-1">
                       <Card className="hover:border-primary/50 transition-colors">
                         <CardContent className="p-4 flex items-start gap-3">
-                          <div className={`p-2 rounded-md shrink-0 ${doc.status === 'parsed' ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
+                          <div className={`p-2 rounded-md shrink-0 ${doc.status === "parsed" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
                             <FileText size={18} />
                           </div>
                           <div className="min-w-0">
                             <p className="font-medium text-sm truncate" title={doc.filename}>{doc.filename}</p>
                             <div className="flex items-center gap-2 mt-1">
                               <Badge variant="outline" className="text-[10px] h-4 px-1">{doc.documentType}</Badge>
-                              <span className="text-xs text-muted-foreground">{format(new Date(doc.uploadedAt), 'MMM d, yyyy')}</span>
+                              <span className="text-xs text-muted-foreground">{format(new Date(doc.uploadedAt), "MMM d, yyyy")}</span>
                             </div>
                           </div>
                         </CardContent>

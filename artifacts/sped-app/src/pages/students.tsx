@@ -1,17 +1,37 @@
 import { Layout } from "@/components/layout";
-import { useListStudents } from "@workspace/api-client-react";
+import { useListStudents, useDeleteStudent, getListStudentsQueryKey } from "@workspace/api-client-react";
 import { useState } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Search, ChevronRight, GraduationCap } from "lucide-react";
+import { Search, ChevronRight, GraduationCap, Trash2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Students() {
   const [search, setSearch] = useState("");
-  
+  const [, navigate] = useLocation();
+
   const { data: students, isLoading } = useListStudents({ search: search || undefined });
+  const deleteStudent = useDeleteStudent();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const handleDelete = (id: number, name: string) => {
+    if (!confirm(`Delete "${name}"? Their documents will be kept but unassigned.`)) return;
+    deleteStudent.mutate({ id }, {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getListStudentsQueryKey() });
+        toast({ title: "Student deleted", description: `${name} has been removed.` });
+      },
+      onError: () => {
+        toast({ title: "Delete failed", variant: "destructive" });
+      },
+    });
+  };
 
   return (
     <Layout>
@@ -46,7 +66,7 @@ export default function Students() {
                   <TableHead>Case Manager</TableHead>
                   <TableHead>Accommodations</TableHead>
                   <TableHead>Documents</TableHead>
-                  <TableHead></TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -59,7 +79,7 @@ export default function Students() {
                       <TableCell><Skeleton className="h-4 w-32" /></TableCell>
                       <TableCell><Skeleton className="h-4 w-8" /></TableCell>
                       <TableCell><Skeleton className="h-4 w-8" /></TableCell>
-                      <TableCell><Skeleton className="h-4 w-4 ml-auto" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-16 ml-auto" /></TableCell>
                     </TableRow>
                   ))
                 ) : students?.length === 0 ? (
@@ -70,9 +90,9 @@ export default function Students() {
                   </TableRow>
                 ) : (
                   students?.map((student) => (
-                    <TableRow key={student.id} className="group cursor-pointer hover:bg-muted/50">
+                    <TableRow key={student.id} className="group">
                       <TableCell className="font-medium">
-                        <Link href={`/students/${student.id}`} className="flex items-center gap-2 group-hover:text-primary transition-colors">
+                        <Link href={`/students/${student.id}`} className="hover:text-primary transition-colors">
                           {student.displayName}
                         </Link>
                       </TableCell>
@@ -83,25 +103,30 @@ export default function Students() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={student.planType !== 'NONE' ? 'default' : 'secondary'} className={student.planType !== 'NONE' ? 'bg-primary/20 text-primary hover:bg-primary/30 border-none' : ''}>
+                        <Badge variant={student.planType !== "NONE" ? "default" : "secondary"} className={student.planType !== "NONE" ? "bg-primary/20 text-primary hover:bg-primary/30 border-none" : ""}>
                           {student.planType}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {student.caseManager}
-                      </TableCell>
-                      <TableCell>
-                        <div className="font-medium">
-                          {student.accommodationCount}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {student.documentCount}
-                      </TableCell>
+                      <TableCell className="text-muted-foreground">{student.caseManager}</TableCell>
+                      <TableCell><div className="font-medium">{student.accommodationCount}</div></TableCell>
+                      <TableCell>{student.documentCount}</TableCell>
                       <TableCell className="text-right">
-                        <Link href={`/students/${student.id}`}>
-                          <ChevronRight className="w-5 h-5 text-muted-foreground inline-block transition-transform group-hover:translate-x-1 group-hover:text-primary" />
-                        </Link>
+                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Link href={`/students/${student.id}`}>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <ChevronRight className="h-4 w-4" />
+                            </Button>
+                          </Link>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={(e) => { e.stopPropagation(); handleDelete(student.id, student.displayName); }}
+                            disabled={deleteStudent.isPending}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))

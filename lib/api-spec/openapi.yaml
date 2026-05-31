@@ -205,6 +205,30 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiError"
 
+    delete:
+      operationId: deleteStudent
+      tags: [students]
+      summary: Delete a student and unassign their documents
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted student
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Student"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
   /students/{id}/accommodations:
     get:
       operationId: getStudentAccommodations

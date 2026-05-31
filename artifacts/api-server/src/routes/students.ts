@@ -137,6 +137,41 @@ router.get("/students/:id", async (req, res) => {
   }
 });
 
+router.delete("/students/:id", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid ID" });
+
+    // Unassign documents (keep them, just detach from student)
+    await db
+      .update(documentsTable)
+      .set({ studentId: null })
+      .where(eq(documentsTable.studentId, id));
+
+    const [deleted] = await db
+      .delete(studentsTable)
+      .where(eq(studentsTable.id, id))
+      .returning();
+
+    if (!deleted) return res.status(404).json({ error: "Student not found" });
+
+    req.log.info({ studentId: id }, "Deleted student");
+    res.json({
+      id: deleted.id,
+      displayName: deleted.displayName,
+      gradeLevel: deleted.gradeLevel,
+      caseManager: deleted.caseManager,
+      planType: deleted.planType,
+      accommodationCount: 0,
+      documentCount: 0,
+      createdAt: deleted.createdAt,
+    });
+  } catch (err) {
+    req.log.error({ err }, "Failed to delete student");
+    res.status(500).json({ error: "Failed to delete student" });
+  }
+});
+
 router.get("/students/:id/accommodations", async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);

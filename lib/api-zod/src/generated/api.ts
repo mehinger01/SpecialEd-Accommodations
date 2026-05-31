@@ -192,6 +192,25 @@ export const GetStudentResponse = zod.object({
 
 
 /**
+ * @summary Delete a student and unassign their documents
+ */
+export const DeleteStudentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteStudentResponse = zod.object({
+  "id": zod.number(),
+  "displayName": zod.string(),
+  "gradeLevel": zod.string(),
+  "caseManager": zod.string(),
+  "planType": zod.enum(['IEP', '504', 'BIP', 'NONE']),
+  "accommodationCount": zod.number(),
+  "documentCount": zod.number(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
  * @summary Get all accommodations for a student
  */
 export const GetStudentAccommodationsParams = zod.object({
