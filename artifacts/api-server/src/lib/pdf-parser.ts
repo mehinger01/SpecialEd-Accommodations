@@ -79,6 +79,7 @@ const IGNORE_HEADERS: RegExp[] = [
   /^setting\s*$/i,
   // Boilerplate sentences found after each accommodation in Skyward IEPs
   /^the iep team must consider/i,
+  /^accommodation is required/i,
   /^extracurricular and nonacademic/i,
   /^needs,\s*social interaction/i,
   /^performance criteria/i,
@@ -132,6 +133,8 @@ const BOILERPLATE_STRIPS: RegExp[] = [
   /participate in extracurricular and nonacademic activities\.?/gi,
   /extracurricular and nonacademic activities\.?/gi,
   /in extracurricular and nonacademic activities\.?/gi,
+  // Strip bare "accommodation is required" fragments that survive line-level filtering
+  /\baccommodation is required\b[^.]*\.?/gi,
 ];
 
 // ─── Category classifier ──────────────────────────────────────────────────────
@@ -415,7 +418,7 @@ function parseDateAnchoredBlocks(
     const range = titleRanges[d];
     if (!range) continue;
 
-    const accommodationName = range.name;
+    const accommodationName = stripBoilerplate(range.name);
 
     // Description upper bound: stop at the EARLIEST line of the next block's title.
     const nextTitleStart =

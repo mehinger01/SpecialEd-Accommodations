@@ -211,7 +211,9 @@ export default function DocumentDetail() {
                                   <CalendarRange className="w-3 h-3" />
                                   {acc.startDate
                                     ? <>{acc.startDate} – {acc.endDate ?? <span className="text-amber-600">End date missing</span>}</>
-                                    : <span className="text-amber-600 flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> Dates missing</span>
+                                    : acc.sourceSection === "Section 6"
+                                      ? <span className="text-muted-foreground italic">Assessment accommodation</span>
+                                      : <span className="text-amber-600 flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> Dates missing</span>
                                   }
                                 </span>
                                 {acc.location && (

@@ -1,0 +1,131 @@
+# CHANGE_REQUEST.md
+# Prototype Cleanup - Student Deletion Cascade
+
+## Objective
+
+Correct student deletion behavior for the prototype.
+
+Current behavior leaves orphaned documents and accommodations after a student is deleted.
+
+For prototype testing, student deletion should completely remove all associated test data.
+
+This change applies only to the prototype.
+
+Do not change parser logic.
+
+Do not change upload workflow.
+
+Do not change accommodation extraction.
+
+Do not change document parsing.
+
+---
+
+# Current Behavior
+
+When a student is deleted:
+
+- Student record is deleted.
+- Documents remain.
+- Documents become unassigned.
+- Accommodations remain.
+
+This causes test data to accumulate and creates orphaned records.
+
+---
+
+# Required Behavior
+
+When a student is deleted:
+
+Delete:
+
+1. Student record
+2. All documents belonging to that student
+3. All accommodations belonging to that student
+4. All accommodation review records associated with those accommodations
+5. Any related linking records
+
+The system should leave no orphaned records.
+
+---
+
+# Confirmation Dialog
+
+Before deletion show:
+
+Delete this student and ALL related documents, accommodations, and review history?
+
+This action cannot be undone.
+
+---
+
+# Delete Order
+
+To avoid foreign key or relationship errors:
+
+1. Delete accommodation review records
+2. Delete accommodations
+3. Delete documents
+4. Delete student
+
+Wrap the operation in a transaction if supported.
+
+If any step fails:
+
+- Roll back all changes
+- Display an error message
+- Leave all records intact
+
+---
+
+# User Feedback
+
+After successful deletion:
+
+Display:
+
+Student and all related records deleted successfully.
+
+Refresh:
+
+- Student list
+- Dashboard counts
+- Accommodation counts
+- Document counts
+
+without requiring a page reload.
+
+---
+
+# Future Production Note
+
+Add a code comment:
+
+PROTOTYPE BEHAVIOR:
+Student deletion permanently removes all related data.
+
+PRODUCTION BEHAVIOR SHOULD LIKELY USE:
+Archive / Deactivate Student
+rather than hard deletion.
+
+Do not implement archive behavior now.
+
+This comment is for future development only.
+
+---
+
+# Definition of Done
+
+This change is complete only when:
+
+1. Deleting a student removes the student record.
+2. Deleting a student removes all related documents.
+3. Deleting a student removes all related accommodations.
+4. No orphaned documents remain.
+5. No orphaned accommodations remain.
+6. Dashboard counts update immediately.
+7. Deletion occurs inside a transaction when available.
+8. Failed deletions roll back cleanly.
+9. Parser behavior is unchanged.
+10. Upload workflow is unchanged.

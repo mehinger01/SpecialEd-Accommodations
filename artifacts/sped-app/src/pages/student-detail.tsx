@@ -1,5 +1,5 @@
 import { Layout } from "@/components/layout";
-import { useGetStudent, getGetStudentQueryKey, useDeleteStudent, getListStudentsQueryKey } from "@workspace/api-client-react";
+import { useGetStudent, getGetStudentQueryKey, useDeleteStudent, getListStudentsQueryKey, getGetStatsQueryKey, getListDocumentsQueryKey, getGetRecentActivityQueryKey } from "@workspace/api-client-react";
 import { useParams, Link, useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,11 +22,14 @@ export default function StudentDetail() {
 
   const handleDelete = () => {
     if (!student) return;
-    if (!confirm(`Delete "${student.displayName}"? Their documents will be kept but unassigned.`)) return;
+    if (!confirm(`Delete this student and ALL related documents, accommodations, and review history?\n\nThis action cannot be undone.`)) return;
     deleteStudent.mutate({ id: studentId }, {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getListStudentsQueryKey() });
-        toast({ title: "Student deleted" });
+        queryClient.invalidateQueries({ queryKey: getGetStatsQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getListDocumentsQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getGetRecentActivityQueryKey() });
+        toast({ title: "Student and all related records deleted successfully." });
         navigate("/students");
       },
       onError: () => {

@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { db, studentsTable, documentsTable, accommodationsTable } from "@workspace/db";
-import { eq, ilike, or, count, sql } from "drizzle-orm";
+import { db, studentsTable, documentsTable, accommodationsTable, activityLogTable } from "@workspace/db";
+import { eq, ilike, or, count, sql, inArray } from "drizzle-orm";
 
 const router = Router();
 
@@ -142,20 +142,39 @@ router.delete("/students/:id", async (req, res) => {
     const id = parseInt(req.params.id, 10);
     if (isNaN(id)) return res.status(400).json({ error: "Invalid ID" });
 
-    // Unassign documents (keep them, just detach from student)
-    await db
-      .update(documentsTable)
-      .set({ studentId: null })
-      .where(eq(documentsTable.studentId, id));
+    // PROTOTYPE BEHAVIOR:
+    // Student deletion permanently removes all related data.
+    //
+    // PRODUCTION BEHAVIOR SHOULD LIKELY USE:
+    // Archive / Deactivate Student rather than hard deletion.
 
-    const [deleted] = await db
-      .delete(studentsTable)
-      .where(eq(studentsTable.id, id))
-      .returning();
+    const deleted = await db.transaction(async (tx) => {
+      // 1. Collect document IDs so we can clean up activity log entries
+      const docs = await tx
+        .select({ id: documentsTable.id })
+        .from(documentsTable)
+        .where(eq(documentsTable.studentId, id));
+      const docIds = docs.map((d) => d.id);
+
+      // 2. Delete activity log records tied to those documents
+      if (docIds.length > 0) {
+        await tx.delete(activityLogTable).where(inArray(activityLogTable.documentId, docIds));
+      }
+
+      // 3. Delete all accommodations for this student
+      await tx.delete(accommodationsTable).where(eq(accommodationsTable.studentId, id));
+
+      // 4. Delete all documents for this student
+      await tx.delete(documentsTable).where(eq(documentsTable.studentId, id));
+
+      // 5. Delete the student record itself
+      const [student] = await tx.delete(studentsTable).where(eq(studentsTable.id, id)).returning();
+      return student ?? null;
+    });
 
     if (!deleted) return res.status(404).json({ error: "Student not found" });
 
-    req.log.info({ studentId: id }, "Deleted student");
+    req.log.info({ studentId: id }, "Deleted student (cascade)");
     res.json({
       id: deleted.id,
       displayName: deleted.displayName,

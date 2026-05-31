@@ -339,57 +339,41 @@ export function UploadModal({ open, onOpenChange }: UploadModalProps) {
               </div>
             )}
 
-            {/* Accommodations table */}
+            {/* Accommodations list */}
             {phase === "done" && result.accommodations.length > 0 && (
               <div className="space-y-2">
                 <h4 className="text-sm font-semibold text-foreground">
                   Extracted Accommodations ({result.accommodations.length})
                 </h4>
-                <div className="border rounded-md overflow-auto max-h-72">
-                  <table className="w-full text-xs">
-                    <thead>
-                      <tr className="bg-muted/40 border-b text-left">
-                        <th className="px-3 py-2 font-semibold whitespace-nowrap">Accommodation Name</th>
-                        <th className="px-3 py-2 font-semibold whitespace-nowrap">Section</th>
-                        <th className="px-3 py-2 font-semibold whitespace-nowrap">Start Date</th>
-                        <th className="px-3 py-2 font-semibold whitespace-nowrap">End Date</th>
-                        <th className="px-3 py-2 font-semibold">Description</th>
-                        <th className="px-3 py-2 font-semibold">Location</th>
-                        <th className="px-3 py-2 font-semibold whitespace-nowrap">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {result.accommodations.map((a, i) => (
-                        <tr key={a.id} className={i % 2 === 0 ? "bg-background" : "bg-muted/20"}>
-                          <td className="px-3 py-2 font-medium max-w-[180px]">
-                            {a.accommodationName || a.category}
-                          </td>
-                          <td className="px-3 py-2 whitespace-nowrap">
-                            {a.sourceSection ? (
-                              <Badge variant="outline" className="text-[10px] font-medium">
-                                {a.sourceSection}
-                              </Badge>
-                            ) : "—"}
-                          </td>
-                          <td className="px-3 py-2 whitespace-nowrap text-muted-foreground">
-                            {a.startDate || <span className="text-amber-600">Missing</span>}
-                          </td>
-                          <td className="px-3 py-2 whitespace-nowrap text-muted-foreground">
-                            {a.endDate || <span className="text-amber-600">Missing</span>}
-                          </td>
-                          <td className="px-3 py-2 text-muted-foreground max-w-[200px] truncate" title={a.description}>
-                            {a.description || "—"}
-                          </td>
-                          <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">
-                            {a.location || "—"}
-                          </td>
-                          <td className="px-3 py-2 whitespace-nowrap">
-                            <Badge variant="secondary" className="text-[10px]">Pending Review</Badge>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                  {result.accommodations.map((a) => (
+                    <div key={a.id} className="rounded-md border bg-muted/20 px-3 py-2.5 text-xs space-y-1.5">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="font-medium text-foreground leading-snug">
+                          {a.accommodationName || a.category}
+                        </p>
+                        <div className="flex items-center gap-1 shrink-0">
+                          {a.sourceSection && (
+                            <Badge variant="outline" className="text-[10px] font-medium">{a.sourceSection}</Badge>
+                          )}
+                          <Badge variant="secondary" className="text-[10px]">Pending Review</Badge>
+                        </div>
+                      </div>
+                      {a.description && (
+                        <p className="text-muted-foreground leading-relaxed">{a.description}</p>
+                      )}
+                      <div className="flex items-center gap-3 text-[10px] text-muted-foreground flex-wrap">
+                        {a.startDate ? (
+                          <span>{a.startDate} – {a.endDate ?? <span className="text-amber-600">end missing</span>}</span>
+                        ) : a.sourceSection === "Section 6" ? (
+                          <span className="italic">Assessment accommodation</span>
+                        ) : (
+                          <span className="text-amber-600">Dates missing</span>
+                        )}
+                        {a.location && <span>📍 {a.location}</span>}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}

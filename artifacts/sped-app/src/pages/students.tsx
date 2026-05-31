@@ -1,5 +1,5 @@
 import { Layout } from "@/components/layout";
-import { useListStudents, useDeleteStudent, getListStudentsQueryKey } from "@workspace/api-client-react";
+import { useListStudents, useDeleteStudent, getListStudentsQueryKey, getGetStatsQueryKey, getListDocumentsQueryKey, getGetRecentActivityQueryKey } from "@workspace/api-client-react";
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Input } from "@/components/ui/input";
@@ -21,11 +21,14 @@ export default function Students() {
   const { toast } = useToast();
 
   const handleDelete = (id: number, name: string) => {
-    if (!confirm(`Delete "${name}"? Their documents will be kept but unassigned.`)) return;
+    if (!confirm(`Delete this student and ALL related documents, accommodations, and review history?\n\nThis action cannot be undone.`)) return;
     deleteStudent.mutate({ id }, {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getListStudentsQueryKey() });
-        toast({ title: "Student deleted", description: `${name} has been removed.` });
+        queryClient.invalidateQueries({ queryKey: getGetStatsQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getListDocumentsQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getGetRecentActivityQueryKey() });
+        toast({ title: "Student and all related records deleted successfully." });
       },
       onError: () => {
         toast({ title: "Delete failed", variant: "destructive" });
