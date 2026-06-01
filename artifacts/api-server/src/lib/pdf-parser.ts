@@ -11,7 +11,8 @@
 // Must import from lib path to avoid pdf-parse@1's startup test-file read
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const pdfParse = require("pdf-parse/lib/pdf-parse.js") as (
-  buffer: Buffer
+  buffer: Buffer,
+  options?: { max?: number }
 ) => Promise<{ text: string; numpages: number }>;
 
 // ─── Output types ─────────────────────────────────────────────────────────────
@@ -32,6 +33,8 @@ export interface ParseResult {
   accommodations: ParsedAccommodation[];
   pageCount: number;
   warnings: string[];
+  displayFilename: string | null;
+  extractedStudentName: string | null;
 }
 
 // ─── Section boundary patterns ────────────────────────────────────────────────
@@ -649,14 +652,133 @@ function extractAccommodations(rawText: string): {
   return { accommodations, warnings };
 }
 
+// ─── Page 1 metadata extraction ───────────────────────────────────────────────
+
+/**
+ * Extracts student name and plan year from page 1 of a Skyward IEP/504/BIP.
+ * Uses the full document text for year extraction (dates appear in section bodies).
+ * Only extracts: student name, plan year, document type — no PII.
+ */
+function extractDisplayFilename(
+  page1Text: string,
+  fullText: string,
+  documentType: string,
+): { studentName: string | null; planYear: string | null; displayFilename: string | null; warnings: string[] } {
+  const warnings: string[] = [];
+
+  // ── Student name ──────────────────────────────────────────────────────────
+  let studentName: string | null = null;
+  const p1Lines = page1Text.split(/\r?\n/);
+
+  // Pattern A: "Student: John Smith" or "Student Name: John Smith" on one line
+  for (const line of p1Lines) {
+    const m = line.match(/^\s*(?:student\s*name|student)\s*:\s*([A-Za-z][^\r\n]{1,59})/i);
+    if (m) {
+      const candidate = m[1].trim().replace(/\s{2,}/g, " ");
+      // Reject obvious label run-ons (DOB, Grade, UIC, IEP…)
+      if (
+        candidate.length >= 2 &&
+        !/^\d/.test(candidate) &&
+        !/^(DOB|Grade|UIC|IEP|Plan|Date|Operating)/i.test(candidate)
+      ) {
+        studentName = candidate;
+        break;
+      }
+    }
+  }
+
+  // Pattern B: "Student" or "Student Name" alone on a line, name on the next
+  if (!studentName) {
+    for (let i = 0; i < p1Lines.length - 1; i++) {
+      if (/^\s*(?:student\s*name|student)\s*$/i.test(p1Lines[i])) {
+        const next = p1Lines[i + 1].trim();
+        if (next.length >= 2 && next.length <= 60 && /^[A-Za-z]/.test(next)) {
+          studentName = next;
+          break;
+        }
+      }
+    }
+  }
+
+  if (!studentName) {
+    warnings.push("Student name could not be extracted from Page 1.");
+  }
+
+  // ── Plan year (from full text) ────────────────────────────────────────────
+  let planYear: string | null = null;
+
+  const yearPatterns: RegExp[] = [
+    /(?:plan\s+end\s+date|implementation\s+end\s+date|iep\s+end\s+date)\s*:?\s*\d{1,2}\/\d{1,2}\/(\d{4})/i,
+    /end\s+date\s*:?\s*\d{1,2}\/\d{1,2}\/(\d{4})/i,
+    /iep\s+date\s*:?\s*\d{1,2}\/\d{1,2}\/(\d{4})/i,
+    /\d{1,2}\/\d{1,2}\/(\d{4})/,
+  ];
+
+  for (const pattern of yearPatterns) {
+    const m = fullText.match(pattern);
+    if (m) {
+      planYear = m[1];
+      break;
+    }
+  }
+
+  if (!planYear) {
+    warnings.push("Plan year could not be extracted.");
+  }
+
+  // ── Display filename ──────────────────────────────────────────────────────
+  let displayFilename: string | null = null;
+
+  if (studentName && planYear) {
+    let formattedName: string;
+    const trimmed = studentName.trim();
+
+    if (/,/.test(trimmed)) {
+      // Already "Last, First" format
+      formattedName = trimmed;
+    } else {
+      const parts = trimmed.split(/\s+/);
+      if (parts.length >= 2) {
+        const last = parts[parts.length - 1];
+        const first = parts.slice(0, -1).join(" ");
+        formattedName = `${last}, ${first}`;
+      } else {
+        formattedName = trimmed;
+      }
+    }
+
+    displayFilename = `${formattedName} - ${planYear} ${documentType}.pdf`;
+  }
+
+  return { studentName, planYear, displayFilename, warnings };
+}
+
 // ─── Public entry point ───────────────────────────────────────────────────────
 
-export async function parsePdf(buffer: Buffer): Promise<ParseResult> {
-  const data = await pdfParse(buffer);
+export async function parsePdf(buffer: Buffer, documentType = "DOCUMENT"): Promise<ParseResult> {
+  const [data, page1Data] = await Promise.all([
+    pdfParse(buffer),
+    pdfParse(buffer, { max: 1 }),
+  ]);
+
   const rawText: string = data.text ?? "";
   const pageCount: number = data.numpages;
+  const page1Text: string = page1Data.text ?? "";
 
   const { accommodations, warnings } = extractAccommodations(rawText);
 
-  return { rawText, pageCount, accommodations, warnings };
+  const {
+    studentName,
+    displayFilename,
+    warnings: p1Warnings,
+  } = extractDisplayFilename(page1Text, rawText, documentType);
+
+  return {
+    rawText,
+    pageCount,
+    accommodations,
+    warnings: [...warnings, ...p1Warnings],
+    displayFilename,
+    extractedStudentName: studentName,
+  };
 }

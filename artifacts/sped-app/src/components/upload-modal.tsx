@@ -42,6 +42,8 @@ interface ParsedAccommodation {
 interface ParseResult {
   docId: number;
   filename: string;
+  displayFilename: string | null;
+  extractedStudentName: string | null;
   accommodations: ParsedAccommodation[];
   warnings: string[];
   rawText: string | null;
@@ -108,6 +110,8 @@ export function UploadModal({ open, onOpenChange }: UploadModalProps) {
           setResult({
             docId,
             filename,
+            displayFilename: doc.displayFilename ?? null,
+            extractedStudentName: doc.extractedStudentName ?? null,
             accommodations: doc.accommodations ?? [],
             warnings: doc.parseWarnings ?? [],
             rawText: doc.rawTextPreview ?? null,
@@ -124,6 +128,8 @@ export function UploadModal({ open, onOpenChange }: UploadModalProps) {
           setResult({
             docId,
             filename,
+            displayFilename: doc.displayFilename ?? null,
+            extractedStudentName: doc.extractedStudentName ?? null,
             accommodations: [],
             warnings: [],
             rawText: doc.rawTextPreview ?? null,
@@ -324,6 +330,24 @@ export function UploadModal({ open, onOpenChange }: UploadModalProps) {
                 <p className="mt-0.5 opacity-80">{statusMessage}</p>
               </div>
             </div>
+
+            {/* Extracted metadata */}
+            {phase === "done" && (result.displayFilename || result.extractedStudentName) && (
+              <div className="rounded-lg border bg-muted/30 px-4 py-3 space-y-1.5 text-sm">
+                {result.extractedStudentName && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground shrink-0">Extracted Student:</span>
+                    <span className="font-medium">{result.extractedStudentName}</span>
+                  </div>
+                )}
+                {result.displayFilename && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground shrink-0">Generated Filename:</span>
+                    <span className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded break-all">{result.displayFilename}</span>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Warnings */}
             {result.warnings.length > 0 && (

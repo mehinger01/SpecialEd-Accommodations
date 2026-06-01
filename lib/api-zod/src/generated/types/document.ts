@@ -11,6 +11,10 @@ import type { DocumentStatus } from './documentStatus';
 export interface Document {
   id: number;
   filename: string;
+  /** @nullable */
+  displayFilename: string | null;
+  /** @nullable */
+  extractedStudentName: string | null;
   documentType: DocumentDocumentType;
   status: DocumentStatus;
   /** @nullable */

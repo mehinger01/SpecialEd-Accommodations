@@ -41,6 +41,8 @@ export const ListDocumentsQueryParams = zod.object({
 export const ListDocumentsResponseItem = zod.object({
   "id": zod.number(),
   "filename": zod.string(),
+  "displayFilename": zod.string().nullable(),
+  "extractedStudentName": zod.string().nullable(),
   "documentType": zod.enum(['IEP', '504', 'BIP', 'OTHER']),
   "status": zod.enum(['pending', 'parsed', 'error']),
   "studentId": zod.number().nullable(),
@@ -72,6 +74,8 @@ export const GetDocumentParams = zod.object({
 export const GetDocumentResponse = zod.object({
   "id": zod.number(),
   "filename": zod.string(),
+  "displayFilename": zod.string().nullable(),
+  "extractedStudentName": zod.string().nullable(),
   "documentType": zod.enum(['IEP', '504', 'BIP', 'OTHER']),
   "status": zod.enum(['pending', 'parsed', 'error']),
   "studentId": zod.number().nullable(),
@@ -181,6 +185,8 @@ export const GetStudentResponse = zod.object({
   "documents": zod.array(zod.object({
   "id": zod.number(),
   "filename": zod.string(),
+  "displayFilename": zod.string().nullable(),
+  "extractedStudentName": zod.string().nullable(),
   "documentType": zod.enum(['IEP', '504', 'BIP', 'OTHER']),
   "status": zod.enum(['pending', 'parsed', 'error']),
   "studentId": zod.number().nullable(),

@@ -6,6 +6,8 @@ import { studentsTable } from "./students";
 export const documentsTable = pgTable("documents", {
   id: serial("id").primaryKey(),
   filename: text("filename").notNull(),
+  displayFilename: text("display_filename"),
+  extractedStudentName: text("extracted_student_name"),
   documentType: text("document_type").notNull().default("OTHER"),
   status: text("status").notNull().default("pending"),
   studentId: integer("student_id").references(() => studentsTable.id, { onDelete: "set null" }),

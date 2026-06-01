@@ -100,7 +100,7 @@ export default function DocumentDetail() {
                 <div className="flex items-center gap-3">
                   <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
                     <FileText className="w-6 h-6 text-primary" />
-                    {doc.filename}
+                    {doc.displayFilename ?? doc.filename}
                   </h1>
                   <Badge variant="outline" className="font-mono">{doc.documentType}</Badge>
                   <Badge variant={doc.status === "parsed" ? "default" : doc.status === "error" ? "destructive" : "secondary"}>

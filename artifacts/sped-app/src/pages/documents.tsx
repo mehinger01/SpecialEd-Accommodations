@@ -25,7 +25,7 @@ export default function Documents() {
   const { toast } = useToast();
 
   const filteredDocuments = documents?.filter(doc => 
-    doc.filename.toLowerCase().includes(search.toLowerCase()) || 
+    (doc.displayFilename ?? doc.filename).toLowerCase().includes(search.toLowerCase()) || 
     (doc.studentName && doc.studentName.toLowerCase().includes(search.toLowerCase()))
   );
 
@@ -120,7 +120,7 @@ export default function Documents() {
                       <TableCell className="font-medium">
                         <Link href={`/documents/${doc.id}`} className="flex items-center gap-2 hover:text-primary transition-colors">
                           <FileText className="w-4 h-4 text-muted-foreground" />
-                          {doc.filename}
+                          {doc.displayFilename ?? doc.filename}
                         </Link>
                       </TableCell>
                       <TableCell>

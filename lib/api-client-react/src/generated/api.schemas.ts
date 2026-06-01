@@ -44,6 +44,10 @@ export const DocumentStatus = {
 export interface Document {
   id: number;
   filename: string;
+  /** @nullable */
+  displayFilename: string | null;
+  /** @nullable */
+  extractedStudentName: string | null;
   documentType: DocumentDocumentType;
   status: DocumentStatus;
   /** @nullable */
@@ -124,6 +128,10 @@ export interface Accommodation {
 export interface DocumentDetail {
   id: number;
   filename: string;
+  /** @nullable */
+  displayFilename: string | null;
+  /** @nullable */
+  extractedStudentName: string | null;
   documentType: DocumentDetailDocumentType;
   status: DocumentDetailStatus;
   /** @nullable */

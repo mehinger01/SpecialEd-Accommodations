@@ -54,6 +54,8 @@ router.get("/documents", async (req, res) => {
       rows.map(async (doc) => ({
         id: doc.id,
         filename: doc.filename,
+        displayFilename: doc.displayFilename ?? null,
+        extractedStudentName: doc.extractedStudentName ?? null,
         documentType: doc.documentType,
         status: doc.status,
         studentId: doc.studentId ?? null,
@@ -104,7 +106,7 @@ router.post("/documents", upload.single("file"), async (req, res) => {
 
     setImmediate(async () => {
       try {
-        const result = await parsePdf(req.file!.buffer);
+        const result = await parsePdf(req.file!.buffer, doc.documentType);
 
         const preview = result.rawText.slice(0, 5000);
         const warnings = result.warnings.length > 0 ? JSON.stringify(result.warnings) : null;
@@ -116,6 +118,8 @@ router.post("/documents", upload.single("file"), async (req, res) => {
             parsedAt: new Date(),
             rawTextPreview: preview,
             parseWarnings: warnings,
+            displayFilename: result.displayFilename,
+            extractedStudentName: result.extractedStudentName,
           })
           .where(eq(documentsTable.id, doc.id));
 
@@ -162,6 +166,8 @@ router.post("/documents", upload.single("file"), async (req, res) => {
     res.status(201).json({
       id: doc.id,
       filename: doc.filename,
+      displayFilename: null,
+      extractedStudentName: null,
       documentType: doc.documentType,
       status: doc.status,
       studentId: doc.studentId ?? null,
@@ -199,6 +205,8 @@ router.get("/documents/:id", async (req, res) => {
     res.json({
       id: doc.id,
       filename: doc.filename,
+      displayFilename: doc.displayFilename ?? null,
+      extractedStudentName: doc.extractedStudentName ?? null,
       documentType: doc.documentType,
       status: doc.status,
       studentId: doc.studentId ?? null,

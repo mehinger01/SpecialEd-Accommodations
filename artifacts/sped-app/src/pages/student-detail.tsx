@@ -319,7 +319,7 @@ export default function StudentDetail() {
                             <FileText size={18} />
                           </div>
                           <div className="min-w-0">
-                            <p className="font-medium text-sm truncate" title={doc.filename}>{doc.filename}</p>
+                            <p className="font-medium text-sm truncate" title={doc.displayFilename ?? doc.filename}>{doc.displayFilename ?? doc.filename}</p>
                             <div className="flex items-center gap-2 mt-1">
                               <Badge variant="outline" className="text-[10px] h-4 px-1">{doc.documentType}</Badge>
                               <span className="text-xs text-muted-foreground">{format(new Date(doc.uploadedAt), "MMM d, yyyy")}</span>

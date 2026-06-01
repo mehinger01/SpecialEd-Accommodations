@@ -432,6 +432,10 @@ components:
           type: integer
         filename:
           type: string
+        displayFilename:
+          type: ["string", "null"]
+        extractedStudentName:
+          type: ["string", "null"]
         documentType:
           type: string
           enum: [IEP, "504", BIP, OTHER]
@@ -455,6 +459,8 @@ components:
       required:
         - id
         - filename
+        - displayFilename
+        - extractedStudentName
         - documentType
         - status
         - studentId
@@ -482,6 +488,10 @@ components:
           type: integer
         filename:
           type: string
+        displayFilename:
+          type: ["string", "null"]
+        extractedStudentName:
+          type: ["string", "null"]
         documentType:
           type: string
           enum: [IEP, "504", BIP, OTHER]
@@ -515,6 +525,8 @@ components:
       required:
         - id
         - filename
+        - displayFilename
+        - extractedStudentName
         - documentType
         - status
         - studentId
