@@ -4,6 +4,18 @@ import { db, documentsTable, accommodationsTable, studentsTable, activityLogTabl
 import { eq, and, sql, desc } from "drizzle-orm";
 import { parsePdf } from "../lib/pdf-parser";
 
+function normalizeStudentName(name: string): string {
+  return name.toLowerCase().replace(/\./g, "").replace(/,/g, "").replace(/\s+/g, " ").trim();
+}
+
+function studentNamesMatch(a: string, b: string): boolean {
+  const na = normalizeStudentName(a);
+  const nb = normalizeStudentName(b);
+  if (na === nb) return true;
+  // Token-set match: handles "Last, First" vs "First Last"
+  return na.split(" ").sort().join(" ") === nb.split(" ").sort().join(" ");
+}
+
 const router = Router();
 
 const upload = multer({
@@ -56,6 +68,7 @@ router.get("/documents", async (req, res) => {
         filename: doc.filename,
         displayFilename: doc.displayFilename ?? null,
         extractedStudentName: doc.extractedStudentName ?? null,
+        studentMatchResult: doc.studentMatchResult ?? null,
         documentType: doc.documentType,
         status: doc.status,
         studentId: doc.studentId ?? null,
@@ -111,6 +124,46 @@ router.post("/documents", upload.single("file"), async (req, res) => {
         const preview = result.rawText.slice(0, 5000);
         const warnings = result.warnings.length > 0 ? JSON.stringify(result.warnings) : null;
 
+        // Auto-match or create a student from the extracted name.
+        // Only runs when no student was pre-assigned at upload time.
+        let resolvedStudentId: number | null = doc.studentId ?? null;
+        let studentMatchResult: string | null = null;
+        let resolvedStudentName: string | null = studentName;
+
+        if (result.extractedStudentName && !doc.studentId) {
+          const allStudents = await db
+            .select({ id: studentsTable.id, displayName: studentsTable.displayName })
+            .from(studentsTable);
+
+          const matched = allStudents.find((s) =>
+            studentNamesMatch(s.displayName, result.extractedStudentName!)
+          );
+
+          if (matched) {
+            resolvedStudentId = matched.id;
+            studentMatchResult = "matched";
+            resolvedStudentName = matched.displayName;
+          } else {
+            try {
+              const [created] = await db
+                .insert(studentsTable)
+                .values({
+                  displayName: result.extractedStudentName,
+                  gradeLevel: "Unknown",
+                  caseManager: "Unassigned",
+                  planType: doc.documentType !== "OTHER" ? doc.documentType : "NONE",
+                })
+                .returning();
+              resolvedStudentId = created.id;
+              studentMatchResult = "created";
+              resolvedStudentName = created.displayName;
+            } catch (createErr) {
+              req.log.error({ createErr }, "Failed to auto-create student from extracted name");
+              studentMatchResult = "failed";
+            }
+          }
+        }
+
         await db
           .update(documentsTable)
           .set({
@@ -120,13 +173,15 @@ router.post("/documents", upload.single("file"), async (req, res) => {
             parseWarnings: warnings,
             displayFilename: result.displayFilename,
             extractedStudentName: result.extractedStudentName,
+            studentId: resolvedStudentId,
+            studentMatchResult,
           })
           .where(eq(documentsTable.id, doc.id));
 
         if (result.accommodations.length > 0) {
           await db.insert(accommodationsTable).values(
             result.accommodations.map((a) => ({
-              studentId: doc.studentId ?? null,
+              studentId: resolvedStudentId,
               documentId: doc.id,
               accommodationName: a.accommodationName,
               category: a.category,
@@ -143,8 +198,8 @@ router.post("/documents", upload.single("file"), async (req, res) => {
         await db.insert(activityLogTable).values({
           type: "parsed",
           documentId: doc.id,
-          documentName: doc.filename,
-          studentName,
+          documentName: result.displayFilename ?? doc.filename,
+          studentName: resolvedStudentName,
           message: `Parsed ${doc.documentType}: found ${result.accommodations.length} accommodation${result.accommodations.length !== 1 ? "s" : ""} across ${result.pageCount} page${result.pageCount !== 1 ? "s" : ""}`,
         });
       } catch (parseErr: any) {
@@ -168,6 +223,7 @@ router.post("/documents", upload.single("file"), async (req, res) => {
       filename: doc.filename,
       displayFilename: null,
       extractedStudentName: null,
+      studentMatchResult: null,
       documentType: doc.documentType,
       status: doc.status,
       studentId: doc.studentId ?? null,
@@ -207,6 +263,7 @@ router.get("/documents/:id", async (req, res) => {
       filename: doc.filename,
       displayFilename: doc.displayFilename ?? null,
       extractedStudentName: doc.extractedStudentName ?? null,
+      studentMatchResult: doc.studentMatchResult ?? null,
       documentType: doc.documentType,
       status: doc.status,
       studentId: doc.studentId ?? null,

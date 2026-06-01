@@ -48,6 +48,8 @@ export interface Document {
   displayFilename: string | null;
   /** @nullable */
   extractedStudentName: string | null;
+  /** @nullable */
+  studentMatchResult: string | null;
   documentType: DocumentDocumentType;
   status: DocumentStatus;
   /** @nullable */
@@ -132,6 +134,8 @@ export interface DocumentDetail {
   displayFilename: string | null;
   /** @nullable */
   extractedStudentName: string | null;
+  /** @nullable */
+  studentMatchResult: string | null;
   documentType: DocumentDetailDocumentType;
   status: DocumentDetailStatus;
   /** @nullable */

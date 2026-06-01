@@ -436,6 +436,8 @@ components:
           type: ["string", "null"]
         extractedStudentName:
           type: ["string", "null"]
+        studentMatchResult:
+          type: ["string", "null"]
         documentType:
           type: string
           enum: [IEP, "504", BIP, OTHER]
@@ -461,6 +463,7 @@ components:
         - filename
         - displayFilename
         - extractedStudentName
+        - studentMatchResult
         - documentType
         - status
         - studentId
@@ -491,6 +494,8 @@ components:
         displayFilename:
           type: ["string", "null"]
         extractedStudentName:
+          type: ["string", "null"]
+        studentMatchResult:
           type: ["string", "null"]
         documentType:
           type: string
@@ -527,6 +532,7 @@ components:
         - filename
         - displayFilename
         - extractedStudentName
+        - studentMatchResult
         - documentType
         - status
         - studentId

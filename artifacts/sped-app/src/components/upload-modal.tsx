@@ -44,6 +44,8 @@ interface ParseResult {
   filename: string;
   displayFilename: string | null;
   extractedStudentName: string | null;
+  studentMatchResult: string | null;
+  studentName: string | null;
   accommodations: ParsedAccommodation[];
   warnings: string[];
   rawText: string | null;
@@ -112,6 +114,8 @@ export function UploadModal({ open, onOpenChange }: UploadModalProps) {
             filename,
             displayFilename: doc.displayFilename ?? null,
             extractedStudentName: doc.extractedStudentName ?? null,
+            studentMatchResult: doc.studentMatchResult ?? null,
+            studentName: doc.studentName ?? null,
             accommodations: doc.accommodations ?? [],
             warnings: doc.parseWarnings ?? [],
             rawText: doc.rawTextPreview ?? null,
@@ -130,6 +134,8 @@ export function UploadModal({ open, onOpenChange }: UploadModalProps) {
             filename,
             displayFilename: doc.displayFilename ?? null,
             extractedStudentName: doc.extractedStudentName ?? null,
+            studentMatchResult: doc.studentMatchResult ?? null,
+            studentName: doc.studentName ?? null,
             accommodations: [],
             warnings: [],
             rawText: doc.rawTextPreview ?? null,
@@ -332,20 +338,47 @@ export function UploadModal({ open, onOpenChange }: UploadModalProps) {
             </div>
 
             {/* Extracted metadata */}
-            {phase === "done" && (result.displayFilename || result.extractedStudentName) && (
+            {phase === "done" && (result.extractedStudentName || result.studentMatchResult || result.displayFilename) && (
               <div className="rounded-lg border bg-muted/30 px-4 py-3 space-y-1.5 text-sm">
                 {result.extractedStudentName && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-muted-foreground shrink-0">Extracted Student:</span>
+                  <div className="flex items-start gap-2">
+                    <span className="text-muted-foreground shrink-0 pt-px">Extracted Student:</span>
                     <span className="font-medium">{result.extractedStudentName}</span>
                   </div>
                 )}
+                {result.studentMatchResult && result.studentMatchResult !== "failed" && (
+                  <div className="flex items-start gap-2">
+                    <span className="text-muted-foreground shrink-0 pt-px">Student Record:</span>
+                    <span className={`font-medium ${result.studentMatchResult === "created" ? "text-green-700" : "text-blue-700"}`}>
+                      {result.studentMatchResult === "created" ? "Created new student" : "Matched existing student"}
+                    </span>
+                  </div>
+                )}
+                {result.studentMatchResult === "failed" && (
+                  <div className="flex items-start gap-2">
+                    <span className="text-muted-foreground shrink-0 pt-px">Student Record:</span>
+                    <span className="font-medium text-destructive">Auto-create failed — document unassigned</span>
+                  </div>
+                )}
+                {result.studentName && (
+                  <div className="flex items-start gap-2">
+                    <span className="text-muted-foreground shrink-0 pt-px">Document Assignment:</span>
+                    <span className="font-medium">Assigned to {result.studentName}</span>
+                  </div>
+                )}
                 {result.displayFilename && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-muted-foreground shrink-0">Generated Filename:</span>
+                  <div className="flex items-start gap-2">
+                    <span className="text-muted-foreground shrink-0 pt-px">Generated Filename:</span>
                     <span className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded break-all">{result.displayFilename}</span>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Fallback: no student extracted warning */}
+            {phase === "done" && !result.extractedStudentName && !result.studentName && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                Student name could not be extracted. Document remains unassigned.
               </div>
             )}
 

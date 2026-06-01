@@ -15,6 +15,8 @@ export interface Document {
   displayFilename: string | null;
   /** @nullable */
   extractedStudentName: string | null;
+  /** @nullable */
+  studentMatchResult: string | null;
   documentType: DocumentDocumentType;
   status: DocumentStatus;
   /** @nullable */

@@ -8,6 +8,7 @@ export const documentsTable = pgTable("documents", {
   filename: text("filename").notNull(),
   displayFilename: text("display_filename"),
   extractedStudentName: text("extracted_student_name"),
+  studentMatchResult: text("student_match_result"),
   documentType: text("document_type").notNull().default("OTHER"),
   status: text("status").notNull().default("pending"),
   studentId: integer("student_id").references(() => studentsTable.id, { onDelete: "set null" }),
