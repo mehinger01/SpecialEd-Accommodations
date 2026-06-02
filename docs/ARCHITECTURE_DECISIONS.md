@@ -78,6 +78,8 @@ Examples:
 - Assignment changes
 - Parser approvals
 - Report exports
+- Teacher roster imports
+- Teacher login events
 
 Rationale:
 - Compliance
@@ -103,3 +105,29 @@ Rationale:
 - Faster delivery
 - Faster pilot validation
 - Lower implementation risk
+
+---
+
+## ADR-008: Teacher CSV as V1 Roster and Identity Source
+Decision:
+- Teacher records will be populated through a predefined CSV import template for V1.
+- Teacher email will serve as the temporary identity key for the teacher portal until OAuth is implemented.
+
+Rationale:
+- Faster than building a full teacher management UI first
+- Gives districts a familiar setup workflow
+- Allows teacher portal access before Google/Microsoft OAuth is ready
+- Connects teacher identity, grade-band eligibility, assignments, and audit events around one stable field: email
+
+Rules:
+- Teacher email must be unique.
+- Teacher email is the V1 login identifier.
+- Only active teachers may access the teacher portal.
+- Uploaded grade bands may generate assignment candidates but do not directly grant access.
+- Active teacher-student assignment records still control visibility.
+
+Deferred:
+- Google OAuth
+- Microsoft OAuth
+- SIS staff roster sync
+- Automated nightly staff import
