@@ -1,0 +1,255 @@
+Special Education
+Accommodations
+Dashboard
+Documents
+Students
+Accommodations
+Dashboard
+Overview of accommodation extraction status.
+
+Upload Document
+Total Documents
+9
+
+Pending Review
+1
+
+Students
+11
+
+Accommodations
+86
+
+Recent Activity
+View all
+Parsed IEP: found 52 accommodations across 4 pages
+May 30, 5:58 PM
+•
+accomdattion_example.pdf
+Uploaded IEP document: accomdattion_example.pdf
+May 30, 5:58 PM
+•
+accomdattion_example.pdf
+Parsed IEP: found 4 accommodations across 4 pages
+May 30, 5:12 PM
+•
+accomdattion_example.pdf
+Uploaded IEP document: accomdattion_example.pdf
+May 30, 5:12 PM
+•
+accomdattion_example.pdf
+Parsed IEP: found 4 accommodations across 4 pages
+May 30, 2:28 PM
+•
+accomdattion_example.pdf
+Uploaded IEP document: accomdattion_example.pdf
+May 30, 2:28 PM
+•
+accomdattion_example.pdf
+Parsed IEP: found 4 accommodations across 4 pages
+May 30, 2:11 PM
+•
+accomdattion_example.pdf
+Uploaded IEP document: accomdattion_example.pdf
+May 30, 2:11 PM
+•
+accomdattion_example.pdf
+Parsed 504: found 5 accommodations across 2 pages
+May 30, 1:52 PM
+•
+Sample_504_StudentE.pdf
+Uploaded 504 document: Sample_504_StudentE.pdf
+May 30, 1:52 PM
+•
+Sample_504_StudentE.pdf
+Uploaded BIP document: Pending_BIP_StudentD.pdf
+May 30, 1:52 PM
+•
+Pending_BIP_StudentD.pdf
+Reviewed and approved accommodation: Extended Time
+May 30, 1:52 PM
+•
+Sample_IEP_StudentA.pdf
+Parsed IEP: found 6 accommodations across 4 pages
+May 30, 1:52 PM
+•
+Sample_IEP_StudentC.pdf
+Uploaded IEP document: Sample_IEP_StudentC.pdf
+May 30, 1:52 PM
+•
+Sample_IEP_StudentC.pdf
+Parsed 504: found 5 accommodations across 2 pages
+May 30, 1:52 PM
+•
+Sample_504_StudentB.pdf
+Uploaded 504 document: Sample_504_StudentB.pdf
+May 30, 1:52 PM
+•
+Sample_504_StudentB.pdf
+Parsed IEP: found 6 accommodations across 3 pages
+May 30, 1:52 PM
+•
+Sample_IEP_StudentA.pdf
+Uploaded IEP document: Sample_IEP_StudentA.pdf
+May 30, 1:52 PM
+•
+Sample_IEP_StudentA.pdf
+Upload Document
+Upload an IEP, 504, or BIP PDF to extract accommodations using rule-based parsing.
+
+Parsing complete
+Found 52 accommodation(s)
+
+94 Warnings
+• Start Date missing for "Assessment - Participation and Provisions" (Section 6)
+• End Date missing for "Assessment - Participation and Provisions" (Section 6)
+• Start Date missing for "Based on Grade Level, Independence Level, and English Language Proficiency" (Section 6)
+• End Date missing for "Based on Grade Level, Independence Level, and English Language Proficiency" (Section 6)
+• Start Date missing for "Is a state assessment administered at the grade levels covered by this IEP? Yes No" (Section 6)
+• End Date missing for "Is a state assessment administered at the grade levels covered by this IEP? Yes No" (Section 6)
+• Start Date missing for "State Determined Assessment State Alternate Assessment (MI-Access)" (Section 6)
+• End Date missing for "State Determined Assessment State Alternate Assessment (MI-Access)" (Section 6)
+• Start Date missing for "State Assessment:" (Section 6)
+• End Date missing for "State Assessment:" (Section 6)
+• Start Date missing for "Assessment AreaAssessment" (Section 6)
+• End Date missing for "Assessment AreaAssessment" (Section 6)
+• Start Date missing for "Rationale" (Section 6)
+• End Date missing for "Rationale" (Section 6)
+• Start Date missing for "For students not taking the State" (Section 6)
+• End Date missing for "For students not taking the State" (Section 6)
+• Start Date missing for "Determined Assessment, please" (Section 6)
+• End Date missing for "Determined Assessment, please" (Section 6)
+• Start Date missing for "indicate why it is not appropriate and" (Section 6)
+• End Date missing for "indicate why it is not appropriate and" (Section 6)
+• Start Date missing for "why the alternate assessment is" (Section 6)
+• End Date missing for "why the alternate assessment is" (Section 6)
+• Start Date missing for "appropriate." (Section 6)
+• End Date missing for "appropriate." (Section 6)
+• Start Date missing for "Accommodations" (Section 6)
+• End Date missing for "Accommodations" (Section 6)
+• Start Date missing for "English Language Arts" (Section 6)
+• End Date missing for "English Language Arts" (Section 6)
+• Start Date missing for "Grades 9-12" (Section 6)
+• End Date missing for "Grades 9-12" (Section 6)
+• Start Date missing for "State" (Section 6)
+• End Date missing for "State" (Section 6)
+• Start Date missing for "Determined" (Section 6)
+• End Date missing for "Determined" (Section 6)
+• Start Date missing for "Assessment" (Section 6)
+• End Date missing for "Assessment" (Section 6)
+• Start Date missing for "Universal Tools:" (Section 6)
+• End Date missing for "Universal Tools:" (Section 6)
+• Start Date missing for "Administration of the" (Section 6)
+• End Date missing for "Administration of the" (Section 6)
+• Start Date missing for "assessment in an alternate" (Section 6)
+• End Date missing for "assessment in an alternate" (Section 6)
+• Start Date missing for "education setting (in" (Section 6)
+• End Date missing for "education setting (in" (Section 6)
+• Start Date missing for "school) with appropriate" (Section 6)
+• End Date missing for "school) with appropriate" (Section 6)
+• Start Date missing for "supervision - Special" (Section 6)
+• End Date missing for "supervision - Special" (Section 6)
+• Start Date missing for "education setting (NE)" (Section 6)
+• End Date missing for "education setting (NE)" (Section 6)
+• Start Date missing for "Mathematics Grades 9-11" (Section 6)
+• End Date missing for "Mathematics Grades 9-11" (Section 6)
+• Start Date missing for "Science Grade 11" (Section 6)
+• End Date missing for "Science Grade 11" (Section 6)
+• Start Date missing for "Participating" (Section 6)
+• End Date missing for "Participating" (Section 6)
+• Start Date missing for "Social Studies Grade 11" (Section 6)
+• End Date missing for "Social Studies Grade 11" (Section 6)
+• Start Date missing for "College Entrance Grades 9-" (Section 6)
+• End Date missing for "College Entrance Grades 9-" (Section 6)
+• Start Date missing for "Work Skills Grade 11" (Section 6)
+• End Date missing for "Work Skills Grade 11" (Section 6)
+• Start Date missing for "District Wide Assessments:" (Section 6)
+• End Date missing for "District Wide Assessments:" (Section 6)
+• Start Date missing for "Is a district-wide assessment administered at the grade level(s) covered by this IEP. Yes No" (Section 6)
+• End Date missing for "Is a district-wide assessment administered at the grade level(s) covered by this IEP. Yes No" (Section 6)
+• Start Date missing for "For students not taking the District" (Section 6)
+• End Date missing for "For students not taking the District" (Section 6)
+• Start Date missing for "Wide Assessment, please indicate" (Section 6)
+• End Date missing for "Wide Assessment, please indicate" (Section 6)
+• Start Date missing for "why it is not appropriate and why the" (Section 6)
+• End Date missing for "why it is not appropriate and why the" (Section 6)
+• Start Date missing for "alternate assessment is appropriate." (Section 6)
+• End Date missing for "alternate assessment is appropriate." (Section 6)
+• Start Date missing for "District-wide Math." (Section 6)
+• End Date missing for "District-wide Math." (Section 6)
+• Start Date missing for "Participate" (Section 6)
+• End Date missing for "Participate" (Section 6)
+• Start Date missing for "Breaks" (Section 6)
+• End Date missing for "Breaks" (Section 6)
+• Start Date missing for "Alternative testing location" (Section 6)
+• End Date missing for "Alternative testing location" (Section 6)
+• Start Date missing for "District-wide Reading.Not Offered" (Section 6)
+• End Date missing for "District-wide Reading.Not Offered" (Section 6)
+• Start Date missing for "District-wide English" (Section 6)
+• End Date missing for "District-wide English" (Section 6)
+• Start Date missing for "Language Arts." (Section 6)
+• End Date missing for "Language Arts." (Section 6)
+• Start Date missing for "Reduced writing" (Section 6)
+• End Date missing for "Reduced writing" (Section 6)
+• Start Date missing for "District-wide Science." (Section 6)
+• End Date missing for "District-wide Science." (Section 6)
+• Start Date missing for "District-wide Social Studies." (Section 6)
+• End Date missing for "District-wide Social Studies." (Section 6)
+Extracted Accommodations (52)
+Accommodation Name	Section	Start Date	End Date	Description	Location	Status
+supervision - Special education setting (NE)	Section 5	12/09/2025	12/08/2026	Alternative setting for testing due to executive functioning deficits The IEP Team must consider if this accommodation is required to participate in extracurricular and nonacademic activities. General and Special Education etc. Alternative testing location	—	Pending Review
+Alternative testing location	Section 5	12/09/2025	12/08/2026	Alternative setting for testing due to executive functioning deficits The IEP Team must consider if this accommodation is required to participate in extracurricular and nonacademic activities. General and Special Education Reduced writing	—	Pending Review
+Wide Assessment, please indicate	Section 6	Missing	Missing	—	—	Pending Review
+Reduced writing	Section 5	12/09/2025	12/08/2026	Reduced by 1/3 due to executive functioning and attentional capabilities The IEP Team must consider if this accommodation is required to participate in extracurricular and nonacademic activities. General and Special Education Needs, Social Interaction Supports for the Student, etc. Breaks	—	Pending Review
+Breaks	Section 5	12/09/2025	12/08/2026	Kayden will have one 5 minute break per class as determined necessary by the teacher/ and Kayden. When Kayden is feeling frustrated, he will take a 5 minute break in the designated break spot. The IEP Team must consider if this accommodation is required to participate in extracurricular and nonacademic activities. General and Special Education Behavior Intervention Plan	—	Pending Review
+Behavior Intervention Plan	Section 5	12/09/2025	12/08/2026	To be used daily in all school The IEP Team must consider if this accommodation is required to participate in extracurricular and nonacademic activities. General and Special Education	—	Pending Review
+Assessment - Participation and Provisions	Section 6	Missing	Missing	—	—	Pending Review
+Based on Grade Level, Independence Level, and English Language Proficiency	Section 6	Missing	Missing	—	—	Pending Review
+Is a state assessment administered at the grade levels covered by this IEP? Yes No	Section 6	Missing	Missing	—	—	Pending Review
+State Determined Assessment State Alternate Assessment (MI-Access)	Section 6	Missing	Missing	—	—	Pending Review
+State Assessment:	Section 6	Missing	Missing	—	—	Pending Review
+Assessment AreaAssessment	Section 6	Missing	Missing	—	—	Pending Review
+Rationale	Section 6	Missing	Missing	—	—	Pending Review
+For students not taking the State	Section 6	Missing	Missing	—	—	Pending Review
+Determined Assessment, please	Section 6	Missing	Missing	—	—	Pending Review
+indicate why it is not appropriate and	Section 6	Missing	Missing	—	—	Pending Review
+why the alternate assessment is	Section 6	Missing	Missing	—	—	Pending Review
+appropriate.	Section 6	Missing	Missing	—	—	Pending Review
+Accommodations	Section 6	Missing	Missing	—	—	Pending Review
+English Language Arts	Section 6	Missing	Missing	—	—	Pending Review
+Grades 9-12	Section 6	Missing	Missing	—	—	Pending Review
+State	Section 6	Missing	Missing	—	—	Pending Review
+Determined	Section 6	Missing	Missing	—	—	Pending Review
+Assessment	Section 6	Missing	Missing	—	—	Pending Review
+Universal Tools:	Section 6	Missing	Missing	—	—	Pending Review
+Administration of the	Section 6	Missing	Missing	—	—	Pending Review
+assessment in an alternate	Section 6	Missing	Missing	—	—	Pending Review
+education setting (in	Section 6	Missing	Missing	—	—	Pending Review
+school) with appropriate	Section 6	Missing	Missing	—	—	Pending Review
+supervision - Special	Section 6	Missing	Missing	—	—	Pending Review
+education setting (NE)	Section 6	Missing	Missing	—	—	Pending Review
+Mathematics Grades 9-11	Section 6	Missing	Missing	—	—	Pending Review
+Science Grade 11	Section 6	Missing	Missing	—	—	Pending Review
+Participating	Section 6	Missing	Missing	—	—	Pending Review
+Social Studies Grade 11	Section 6	Missing	Missing	—	—	Pending Review
+College Entrance Grades 9-	Section 6	Missing	Missing	—	—	Pending Review
+Work Skills Grade 11	Section 6	Missing	Missing	—	—	Pending Review
+District Wide Assessments:	Section 6	Missing	Missing	—	—	Pending Review
+Is a district-wide assessment administered at the grade level(s) covered by this IEP. Yes No	Section 6	Missing	Missing	—	—	Pending Review
+For students not taking the District	Section 6	Missing	Missing	—	—	Pending Review
+why it is not appropriate and why the	Section 6	Missing	Missing	—	—	Pending Review
+alternate assessment is appropriate.	Section 6	Missing	Missing	—	—	Pending Review
+District-wide Math.	Section 6	Missing	Missing	—	—	Pending Review
+Participate	Section 6	Missing	Missing	—	—	Pending Review
+Breaks	Section 6	Missing	Missing	—	—	Pending Review
+Alternative testing location	Section 6	Missing	Missing	—	—	Pending Review
+District-wide Reading.Not Offered	Section 6	Missing	Missing	—	—	Pending Review
+District-wide English	Section 6	Missing	Missing	—	—	Pending Review
+Language Arts.	Section 6	Missing	Missing	—	—	Pending Review
+Reduced writing	Section 6	Missing	Missing	—	—	Pending Review
+District-wide Science.	Section 6	Missing	Missing	—	—	Pending Review
+District-wide Social Studies.	Section 6	Missing	Missing	—	—	Pending Review
+Show raw JSON
+Close
+View Document →
+Close

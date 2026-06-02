@@ -1,0 +1,384 @@
+# SPEC.md
+
+# Special Education Accommodation Parser – Prototype Phase
+
+## Project Context
+
+This parser is the first component of a larger Special Education Accommodation Management System that may eventually be deployed for district use.
+
+The final system may include:
+
+* Google Drive batch import
+* IEP support
+* 504 support
+* BIP support
+* Accommodation database
+* Teacher accommodation dashboard
+* Accommodation implementation logging
+* Director compliance dashboard
+* Audit trail
+* Role-based permissions
+
+This phase is a parser prototype only.
+
+---
+
+# Current Objective
+
+Build a reliable accommodation parser for Skyward-generated IEP documents.
+
+The parser must:
+
+1. Accept a PDF upload.
+2. Locate Section 5 and Section 6.
+3. Extract accommodation records.
+4. Display results in a review screen.
+5. Produce structured JSON output.
+6. Avoid over-extraction of descriptive text.
+
+---
+
+# Scope Limitations
+
+Do NOT parse:
+
+* Student Name
+* Grade
+* DOB
+* UIC
+* Parent Information
+* Demographic Information
+* Page 1 data
+
+Do NOT use:
+
+* AI
+* OpenAI
+* LLMs
+* Cloud OCR
+* External extraction services
+
+Do NOT permanently store uploaded PDFs.
+
+This prototype is focused exclusively on accommodation extraction.
+
+---
+
+# Current Failure
+
+The parser is incorrectly identifying descriptive text as accommodations.
+
+Example:
+
+Current Output:
+
+* Kayden will have one 5 minute break
+* take a 5 minute break in the
+* designated break spot
+
+These are NOT accommodations.
+
+They are descriptive text belonging to the accommodation:
+
+* Breaks
+
+This behavior must be eliminated.
+
+---
+
+# Core Parsing Rule
+
+An accommodation is a structured record.
+
+An accommodation is NOT a sentence.
+
+An accommodation record contains:
+
+* Accommodation Name
+* Source Section
+* Start Date
+* End Date
+* Description
+* Location
+
+The parser must identify accommodation records and then attach descriptive text to those records.
+
+The parser must never create accommodations from random sentences.
+
+---
+
+# Section Detection
+
+Do NOT rely on page numbers.
+
+Find sections using section headers.
+
+Section 5 begins at:
+
+* Section 5
+* Supplementary Aids and Services
+
+Section 5 ends at:
+
+* Section 6
+
+Section 6 begins at:
+
+* Section 6
+* Assessment Participation and Provisions
+
+Section 6 ends at:
+
+* Section 7
+
+If a section cannot be found, display a visible warning.
+
+---
+
+# Section 5 Parsing Rules
+
+For Section 5:
+
+Locate accommodation blocks.
+
+A new accommodation record begins when:
+
+* A meaningful accommodation title appears
+* The title is immediately associated with Start Date and End Date
+
+The parser should capture:
+
+* Accommodation Name
+* Start Date
+* End Date
+* Description
+* Location
+
+Everything after the dates belongs to that accommodation until the next accommodation begins.
+
+---
+
+# Description Handling
+
+Description text should be attached to the accommodation.
+
+Description text should NEVER become accommodation names.
+
+Examples of description text:
+
+* Alternative setting for testing due to executive functioning deficits
+* Reduced by 1/3 due to executive functioning and attentional capabilities
+* Student will have one 5 minute break per class
+* Student will take a break in designated break spot
+* To be used daily in all school settings
+
+These belong in Description.
+
+They are not accommodation names.
+
+---
+
+# Ignore These Headers
+
+Never create accommodations from:
+
+* Ongoing Instruction and Assessment
+* Scheduling, Presentation, Response, Etc.
+* Curriculum Supports and Adjustments
+* Directions, Grading, Handwriting, Assignments, Tests, Books, etc.
+* Supports and Modifications to the Environment
+* Classroom Environment, Health-Related Needs, Physical Needs, Transitioning Times, Assistive Technology, Behavioral, Training Needs, Social Interaction Supports for the Student, etc.
+* Time/Frequency/Condition
+* Location
+* General and Special Education
+
+These are section labels only.
+
+---
+
+# Expected Section 5 Accommodations
+
+Using the current sample PDF, the parser should identify approximately:
+
+1. Universal Tools: Administration of the assessment in an alternate education setting (in school) with appropriate supervision - Special education setting (NE)
+
+2. Alternative testing location
+
+3. Reduced writing
+
+4. Breaks
+
+5. Behavior Intervention Plan
+
+If the parser extracts significantly more accommodations from the current sample, it is likely over-extracting.
+
+---
+
+# Section 6 Parsing Rules
+
+Section 6 contains assessment accommodations.
+
+Extract as separate records.
+
+Fields:
+
+* Accommodation Name
+* Source Section
+* Assessment Area (if available)
+* Assessment Type (if available)
+
+Known accommodations appearing in the sample:
+
+* Universal Tools: Administration of the assessment in an alternate education setting (in school) with appropriate supervision - Special education setting (NE)
+* Breaks
+* Alternative testing location
+* Reduced writing
+
+Do not merge Section 5 and Section 6 accommodations.
+
+They should remain separate records.
+
+---
+
+# Deduplication Rules
+
+Deduplicate within a section using:
+
+* Accommodation Name
+* Start Date
+* End Date
+
+Normalize:
+
+* Trim whitespace
+* Remove duplicate spaces
+* Remove line breaks
+* Ignore capitalization
+* Remove bullet characters
+
+Example:
+
+"Breaks"
+and
+" breaks "
+
+should be treated as the same accommodation.
+
+---
+
+# Upload Workflow
+
+Current issue:
+
+Upload requires selecting an existing student.
+
+For this prototype:
+
+Add:
+
+Create New Student
+
+When selected:
+
+Show:
+
+Student Display Name
+
+Requirements:
+
+* User may enter any display name
+* Student record is automatically created
+* Upload proceeds immediately
+* No demographic data required
+* No grade required
+* No Page 1 parsing required
+
+This is temporary until batch import is implemented.
+
+---
+
+# Review Screen Requirements
+
+After parsing:
+
+Display accommodation table.
+
+Columns:
+
+* Accommodation Name
+* Source Section
+* Start Date
+* End Date
+* Description
+* Location
+* Status
+
+Display raw JSON below the table.
+
+---
+
+# Warning Conditions
+
+Display warnings when:
+
+* Section 5 not found
+* Section 6 not found
+* No accommodations found
+* Start Date missing
+* End Date missing
+
+Warnings must be visible to the user.
+
+---
+
+# Architecture Requirements
+
+Keep parser logic separate from UI logic.
+
+Recommended structure:
+
+/parser
+/ui
+/models
+/tests
+
+Parser should be reusable later for:
+
+* Google Drive imports
+* Batch processing
+* Human review queue
+* Accommodation database
+
+---
+
+# Definition of Done
+
+This task is complete only when:
+
+1. Upload button functions correctly.
+
+2. User can create a new student during upload.
+
+3. Parser correctly identifies Section 5.
+
+4. Parser correctly identifies Section 6.
+
+5. Parser extracts approximately the five expected Section 5 accommodations from the sample.
+
+6. Parser does NOT create accommodations from sentence fragments.
+
+7. Description text is stored as description.
+
+8. Section 6 accommodations are extracted separately.
+
+9. Accommodation table displays correctly.
+
+10. Raw JSON matches table output.
+
+11. Missing sections or dates generate visible warnings.
+
+12. No Page 1 demographic fields are parsed.
+
+13. No AI services are used.
+
+14. Uploaded PDFs are not permanently stored.

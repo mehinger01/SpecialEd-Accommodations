@@ -1,0 +1,3 @@
+- [Orval codegen barrel patch](orval-codegen-patch.md) — Orval regenerates index.ts with a types re-export that conflicts; patch script removes it after every codegen run.
+- [Vite stale module cache after codegen](vite-stale-cache.md) — After every codegen run, Vite's HMR fails with "Failed to load url /@fs/…/api-client-react/src/generated/api.ts"; fix is always restart_workflow on sped-app.
+- [Student auto-assign from Page 1](student-auto-assign.md) — After PDF parse, auto-match/create student from extractedStudentName; token-set name normalization handles "Last, First" vs "First Last"; only fires when no student was pre-assigned at upload time.
