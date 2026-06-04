@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lighthouse SPED Dashboard</title>
+<style>
+:root {
+  --bg:#f5f7fb; --surface:#fff; --soft:#f8fafc; --border:#e2e8f0; --text:#0f172a; --muted:#64748b;
+  --blue:#2563eb; --blue-soft:#eff6ff; --green:#16a34a; --green-soft:#ecfdf5; --amber:#d97706; --amber-soft:#fffbeb;
+  --red:#dc2626; --red-soft:#fef2f2; --shadow:0 8px 22px rgba(15,23,42,.06); --radius:16px;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,"Segoe UI",Arial,sans-serif}
+.layout{display:grid;grid-template-columns:280px 1fr;min-height:100vh}
+.sidebar{background:#fff;border-right:1px solid var(--border);padding:24px 18px;position:sticky;top:0;height:100vh}
+.brand{display:flex;align-items:center;gap:12px;margin-bottom:30px;padding:0 8px}
+.logo{width:44px;height:44px;border-radius:12px;background:var(--blue);color:white;display:grid;place-items:center;font-weight:850;font-size:18px}
+.brand h1{margin:0;font-size:18px} .brand span{color:var(--muted);font-size:12px}
+.section-label{color:#94a3b8;text-transform:uppercase;font-size:11px;font-weight:800;letter-spacing:.08em;margin:24px 10px 10px}
+.nav-item{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;margin-bottom:4px;border-radius:12px;color:#334155;font-size:14px;font-weight:650;cursor:pointer}
+.nav-item:hover{background:#f1f5f9} .nav-item.active{background:var(--blue-soft);color:var(--blue)}
+.badge{background:#e0e7ff;color:#3730a3;padding:3px 8px;border-radius:999px;font-size:11px;font-weight:800}
+.director-card{margin-top:28px;padding:16px;border-radius:16px;background:var(--blue-soft);border:1px solid #bfdbfe}
+.director-card strong{display:block;margin-bottom:6px;font-size:14px;color:#1e40af} .director-card p{margin:0;color:#475569;font-size:13px;line-height:1.45}
+.content{padding:28px}
+.hero{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;margin-bottom:24px}
+.eyebrow{color:var(--blue);text-transform:uppercase;font-size:12px;letter-spacing:.08em;font-weight:800;margin-bottom:8px}
+h2{margin:0;font-size:30px;letter-spacing:-.03em;line-height:1.1}
+.hero p{margin-top:10px;color:var(--muted);max-width:880px;line-height:1.55;font-size:15px}
+.actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+button{border:1px solid var(--border);border-radius:10px;padding:10px 14px;font-weight:750;background:white;color:#334155;cursor:pointer}
+.btn-primary{background:var(--blue);color:white;border-color:var(--blue)} .btn-danger{background:var(--red-soft);color:var(--red);border-color:#fecaca}
+.kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-bottom:20px;align-items:stretch}
+.card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow)}
+.kpi{padding:18px;height:205px;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden} .kpi label{display:block;color:var(--muted);font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px;min-height:32px}
+.value{font-size:30px;font-weight:850;letter-spacing:-.03em;line-height:1.1;margin-bottom:8px;min-height:72px;display:flex;align-items:center;overflow:hidden;word-break:normal} .trend{font-size:12px;font-weight:800;color:var(--muted);min-height:34px;display:flex;align-items:flex-start} 
+.dashboard-grid{display:grid;grid-template-columns:1.55fr 1fr;gap:20px;margin-bottom:20px;align-items:start}.dashboard-grid>.card{min-height:525px}
+.panel-header{display:flex;justify-content:space-between;align-items:center;padding:18px 20px;border-bottom:1px solid var(--border)}
+.panel-header h3{margin:0;font-size:17px} .panel-header span{color:var(--muted);font-size:13px}
+.panel-body{padding:18px 20px;min-height:430px} table{width:100%;border-collapse:collapse;min-width:760px;table-layout:fixed}
+th{text-align:left;padding:12px 8px;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.08em;border-bottom:1px solid var(--border)}
+td{padding:14px 8px;border-bottom:1px solid #f1f5f9;vertical-align:top;font-size:14px}tbody tr{height:68px}
+.name{font-weight:800;margin-bottom:4px} .sub{color:var(--muted);font-size:12px}
+.pill{display:inline-flex;padding:5px 9px;border-radius:999px;font-size:12px;font-weight:800;background:var(--blue-soft);color:var(--blue)}
+.quick-list{display:grid;gap:12px;min-height:390px} .quick-row{display:flex;justify-content:space-between;gap:10px;padding:12px;border:1px solid var(--border);border-radius:12px;background:var(--soft)}
+.quick-row strong{font-size:14px} .quick-row span{color:var(--muted);font-size:13px;text-align:right}
+@media(max-width:1300px){.kpi-grid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:980px){.layout{grid-template-columns:1fr}.sidebar{display:none}.dashboard-grid{grid-template-columns:1fr}.hero{flex-direction:column}}
+</style>
+</head>
+<body>
+<div class="layout">
+<aside class="sidebar">
+  <div class="brand"><div class="logo">L</div><div><h1>Lighthouse</h1><span>SPED Accommodations</span></div></div>
+  <div class="section-label">Director</div>
+  <div class="nav-item active" data-section="Executive Overview"><span>Executive Overview</span><span class="badge">Live</span></div>
+  <div class="nav-item" data-section="Student Plan Analytics"><span>Student Plan Analytics</span><span class="badge">250</span></div>
+  <div class="nav-item" data-section="Compliance Systems"><span>Compliance Systems</span></div>
+  <div class="nav-item" data-section="Special Education"><span>Special Education</span></div>
+  <div class="section-label">Operations</div>
+  <div class="nav-item" data-section="Accommodation Logs"><span>Accommodation Logs</span><span class="badge">22</span></div>
+  <div class="nav-item" data-section="Teacher Assignments"><span>Teacher Assignments</span><span class="badge">31</span></div>
+  <div class="nav-item" data-section="Document Review"><span>Document Review</span><span class="badge">37</span></div>
+  <div class="nav-item" data-section="Reports"><span>Reports</span></div>
+  <div class="director-card"><strong>Director Insight Engine</strong><p>Mock data is wired to every toolbar item for prototype review.</p></div>
+</aside>
+<main class="content">
+  <section class="hero">
+    <div><div class="eyebrow" id="eyebrow">Special Education Operations</div><h2 id="page-title">Executive Overview</h2><p id="page-copy">A clean operational dashboard for monitoring accommodations, documentation, assignments, and compliance risk.</p></div>
+    <div class="actions"><button>Review Missing Logs</button><button>Upload Documents</button><button class="btn-danger">Review Risks</button><button class="btn-primary">Generate Summary</button></div>
+  </section>
+  <section class="kpi-grid" id="kpis"></section>
+  <section class="dashboard-grid">
+    <div class="card"><div class="panel-header"><div><h3 id="table-title">Mock Data Detail</h3><span>Values change when the left toolbar is selected</span></div></div><div class="panel-body"><table><thead><tr><th>Item</th><th>Volume</th><th>Risk / Trend</th><th>Status</th></tr></thead><tbody id="table-body"></tbody></table></div></div>
+    <div class="card"><div class="panel-header"><div><h3>Quick Signals</h3><span>Section highlights</span></div></div><div class="panel-body"><div class="quick-list" id="quick-list"></div></div></div>
+  </section>
+</main>
+</div>
+<script>
+const DATA = {"Executive Overview": {"kpis": [["Active Student Plans", "250", "+2.4% vs last year"], ["Reviews Due in 30 Days", "18", "Manageable monthly load"], ["Missing Documentation", "7", "Down from 11 last month"], ["Open Compliance Flags", "5", "2 urgent follow-ups"], ["Teachers Logging This Week", "41 / 48", "85% weekly participation"]], "rows": [["IEP Annual Reviews", "18 due soon", "Moderate", "On Track"], ["504 Accommodation Plans", "42 active", "Moderate", "Monitoring"], ["Teacher Accommodation Logs", "22 gaps", "Moderate", "Follow Up"], ["Document Review Queue", "37 packets", "Low", "In Progress"]]}, "Student Plan Analytics": {"kpis": [["Total Active Plans", "250", "198 IEP / 42 504 / 10 BIP"], ["Students with Multiple Supports", "31", "Cross-plan monitoring"], ["New Plans This Year", "17", "Current year additions"], ["Exited Plans This Year", "9", "Exited or no longer active"], ["Top Accommodation", "Extended Time", "87 students"]], "rows": [["Grade K-2", "44 students", "Stable", "Covered"], ["Grade 3-5", "57 students", "Stable", "Covered"], ["Grade 6-8", "63 students", "Watch", "Monitor"], ["Grade 9-12", "86 students", "Stable", "Covered"], ["Extended Time", "87 students", "High use", "Common"], ["Small Group Testing", "64 students", "High use", "Common"]]}, "Compliance Systems": {"kpis": [["Due in 30 Days", "18", "Upcoming annual reviews"], ["Due in 60 Days", "39", "Planning window"], ["Due in 90 Days", "64", "Long-range view"], ["Overdue", "2", "Immediate follow-up"], ["Audit Reports Available", "4", "Export-ready"]], "rows": [["Annual Review Approaching", "2", "High", "Needs Action"], ["Missing Implementation Evidence", "7", "Medium", "Follow Up"], ["No Teacher Log in 14 Days", "18", "Medium", "Monitor"], ["Pending Document Approval", "9", "Low", "In Progress"]]}, "Special Education": {"kpis": [["Case Managers", "12", "Active staff"], ["Avg. Case Load", "21", "Active plans per staff"], ["Highest Case Load", "29", "Watch for balance"], ["Related Service Providers", "11", "Speech, OT, PT, SW, Behavior"], ["Primary Eligibility Groups", "7", "Tracked categories"]], "rows": [["Specific Learning Disability", "72 students", "Largest group", "Active"], ["Speech/Language Impairment", "46 students", "Service driven", "Active"], ["Other Health Impairment", "39 students", "Moderate", "Active"], ["Autism Spectrum Disorder", "28 students", "Support intensive", "Active"], ["Emotional Impairment", "19 students", "Watch", "Active"]]}, "Accommodation Logs": {"kpis": [["Expected Logs This Week", "540", "Across assigned teachers"], ["Submitted Logs", "461", "85% complete"], ["Missing Logs", "22", "Needs follow-up"], ["Students with Missing Logs", "18", "Director attention"], ["Could Not Deliver", "11", "Exception tracking"]], "rows": [["Delivered", "381 logs", "Good", "Complete"], ["Not Needed Today", "38 logs", "Normal", "Documented"], ["Student Absent", "24 logs", "Normal", "Documented"], ["Could Not Deliver", "11 logs", "Medium", "Review"], ["Other", "7 logs", "Low", "Review if repeated"]]}, "Teacher Assignments": {"kpis": [["Active Teachers", "48", "Imported roster"], ["Teachers with Assignments", "45", "3 need review"], ["Students Assigned", "244", "6 unassigned"], ["Pending Candidates", "31", "Awaiting director approval"], ["Assignment Source", "Grade Match", "V1 generation logic"]], "rows": [["K-2 Coverage", "44 assigned", "Low", "Complete"], ["3-5 Coverage", "57 assigned", "Low", "Complete"], ["6-8 Coverage", "60 assigned", "Moderate", "Watch"], ["9-12 Coverage", "83 assigned", "Low", "Complete"], ["Unassigned Students", "6 students", "High", "Needs Action"]]}, "Document Review": {"kpis": [["Uploaded This Month", "37", "IEP/504/BIP packets"], ["Pending Review", "9", "Awaiting approval"], ["Approved", "24", "Moved to records"], ["Needs Correction", "4", "Manual cleanup"], ["Failed Parse", "1", "Technical review"]], "rows": [["IEP Packets", "28 uploaded", "Normal", "Processing"], ["504 Packets", "7 uploaded", "Normal", "Processing"], ["BIP Packets", "2 uploaded", "Low", "Processing"], ["High Confidence Parses", "31", "Good", "Review"], ["Needs Manual Review", "6", "Medium", "Follow Up"]]}, "Reports": {"kpis": [["Available Reports", "6", "MVP report set"], ["Exports This Month", "11", "Director activity"], ["Scheduled Reports", "3", "Recurring exports"], ["Last Export", "Teacher Summary", "2026-06-03"], ["Audit Export", "Ready", "Compliance-ready"]], "rows": [["Missing Accommodation Logs", "Available", "High", "Useful"], ["Teacher Completion Summary", "Available", "High", "Useful"], ["Student Accommodation Activity", "Available", "High", "Useful"], ["Annual Review Timeline", "Available", "Medium", "Useful"], ["Document Review Status", "Available", "Medium", "Useful"], ["Audit Event Export", "Available", "High", "Compliance"]]}};
+
+function render(section) {
+  const data = DATA[section];
+  document.getElementById("page-title").textContent = section;
+  document.getElementById("table-title").textContent = section + " Detail";
+  document.getElementById("page-copy").textContent = "Mock data view for " + section.toLowerCase() + " within a 250-student SPED accommodations platform.";
+
+  document.querySelectorAll(".nav-item").forEach(item => {
+    item.classList.toggle("active", item.dataset.section === section);
+  });
+
+  document.getElementById("kpis").innerHTML = data.kpis.map(k => `
+    <div class="card kpi">
+      <label>${k[0]}</label>
+      <div class="value">${k[1]}</div>
+      <div class="trend">${k[2]}</div>
+    </div>
+  `).join("");
+
+  const rows = data.rows.slice(0, 6);
+  while (rows.length < 6) rows.push(["", "", "", ""]);
+
+  document.getElementById("table-body").innerHTML = rows.map(r => `
+    <tr>
+      <td><div class="name">${r[0]}</div><div class="sub">${r[0] ? section : ""}</div></td>
+      <td>${r[1]}</td>
+      <td>${r[2]}</td>
+      <td>${r[3] ? `<span class="pill">${r[3]}</span>` : ""}</td>
+    </tr>
+  `).join("");
+
+  document.getElementById("quick-list").innerHTML = data.kpis.map(k => `
+    <div class="quick-row"><strong>${k[0]}</strong><span>${k[1]}<br>${k[2]}</span></div>
+  `).join("");
+}
+
+document.querySelectorAll(".nav-item[data-section]").forEach(item => {
+  item.addEventListener("click", () => render(item.dataset.section));
+});
+
+render("Executive Overview");
+</script>
+</body>
+</html>
