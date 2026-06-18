@@ -7,7 +7,7 @@
 <style>
 :root {
   --bg:#f5f7fb; --surface:#fff; --soft:#f8fafc; --border:#e2e8f0; --text:#0f172a; --muted:#64748b;
-  --blue:#2563eb; --blue-soft:#eff6ff; --green:#16a34a; --green-soft:#ecfdf5; --amber:#d97706; --amber-soft:#fffbeb;
+  --blue:#12355B; --blue-soft:#eff6ff; --green:#16a34a; --green-soft:#ecfdf5; --amber:#F4B942; --amber-soft:#fffbeb;
   --red:#dc2626; --red-soft:#fef2f2; --shadow:0 8px 22px rgba(15,23,42,.06); --radius:16px;
 }
 *{box-sizing:border-box}
@@ -15,7 +15,8 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,"Segoe UI
 .layout{display:grid;grid-template-columns:280px 1fr;min-height:100vh}
 .sidebar{background:#fff;border-right:1px solid var(--border);padding:24px 18px;position:sticky;top:0;height:100vh}
 .brand{display:flex;align-items:center;gap:12px;margin-bottom:30px;padding:0 8px}
-.logo{width:44px;height:44px;border-radius:12px;background:var(--blue);color:white;display:grid;place-items:center;font-weight:850;font-size:18px}
+.logo{width:46px;height:46px;border-radius:13px;background:linear-gradient(145deg,#12355B,#061a33);display:grid;place-items:center;box-shadow:0 10px 24px rgba(18,53,91,.22);overflow:hidden;flex:0 0 46px}
+.logo svg{width:38px;height:38px;display:block}
 .brand h1{margin:0;font-size:18px} .brand span{color:var(--muted);font-size:12px}
 .section-label{color:#94a3b8;text-transform:uppercase;font-size:11px;font-weight:800;letter-spacing:.08em;margin:24px 10px 10px}
 .nav-item{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;margin-bottom:4px;border-radius:12px;color:#334155;font-size:14px;font-weight:650;cursor:pointer}
@@ -52,7 +53,7 @@ td{padding:14px 8px;border-bottom:1px solid #f1f5f9;vertical-align:top;font-size
 <body>
 <div class="layout">
 <aside class="sidebar">
-  <div class="brand"><div class="logo">L</div><div><h1>Lighthouse</h1><span>SPED Accommodations</span></div></div>
+  <div class="brand"><div class="logo" aria-label="Lighthouse logo"><svg viewBox="0 0 64 64" role="img" aria-hidden="true"><path d="M22 45h20l4 9H18z" fill="#ffffff" opacity=".98"/><path d="M27 20h10l3 28H24z" fill="#ffffff"/><path d="M25 17h14v6H25z" fill="#ffffff"/><path d="M23 15h18l-4-5H27z" fill="#ffffff"/><path d="M28 8h8l-2-3h-4z" fill="#ffffff"/><rect x="28" y="23" width="8" height="5" rx="1" fill="#12355B"/><rect x="29" y="33" width="6" height="6" rx="1" fill="#12355B"/><rect x="30" y="43" width="4" height="5" rx="1" fill="#12355B"/><path d="M39 18 58 8 45 24 34 27 34 20z" fill="#F4B942"/><path d="M15 52c5-8 11-7 17-2 5-4 11-3 17 2z" fill="#ffffff"/><path d="M44 40h9l5 5v7H42v-7z" fill="#9fb0c2" opacity=".65"/><rect x="47" y="46" width="3" height="3" fill="#F4B942" opacity=".95"/><rect x="53" y="46" width="3" height="3" fill="#F4B942" opacity=".95"/></svg></div><div><h1>Lighthouse</h1><span>SPED Accommodations</span></div></div>
   <div class="section-label">Director</div>
   <div class="nav-item active" data-section="Executive Overview"><span>Executive Overview</span><span class="badge">Live</span></div>
   <div class="nav-item" data-section="Student Plan Analytics"><span>Student Plan Analytics</span><span class="badge">250</span></div>
